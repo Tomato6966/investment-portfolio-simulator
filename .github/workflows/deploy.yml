@@ -36,7 +36,6 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
       - name: Create 404.html
         run: cp dist/index.html dist/404.html
 
