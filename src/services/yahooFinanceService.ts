@@ -37,6 +37,8 @@ interface YahooChartResult {
   };
 }
 
+const API_BASE = import.meta.env.VITE_YAHOO_API_URL || '/yahoo';
+
 export const searchAssets = async (query: string): Promise<Asset[]> => {
   try {
     const params = new URLSearchParams({
@@ -45,7 +47,11 @@ export const searchAssets = async (query: string): Promise<Asset[]> => {
       type: 'equity,etf',
     });
 
-    const response = await fetch(`/yahoo/v1/finance/lookup?${params}`);
+    const response = await fetch(`${API_BASE}/v1/finance/lookup?${params}`, {
+      headers: {
+        'Origin': import.meta.env.VITE_YAHOO_ORIGIN || window.location.origin
+      }
+    });
     if (!response.ok) throw new Error('Network response was not ok');
 
     const data = await response.json() as YahooSearchResponse;

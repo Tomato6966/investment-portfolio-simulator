@@ -3,15 +3,14 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main  # oder master, je nachdem welchen Branch-Namen Sie verwenden
-  workflow_dispatch: # Ermöglicht manuelles Triggern
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Erlaubt nur einen gleichzeitigen Deploy
 concurrency:
   group: "pages"
   cancel-in-progress: true
@@ -39,6 +38,11 @@ jobs:
         run: npm run build
         env:
           VITE_BASE_URL: '/${{ github.event.repository.name }}'
+          VITE_YAHOO_API_URL: 'https://query1.finance.yahoo.com'
+          VITE_YAHOO_ORIGIN: 'https://finance.yahoo.com'
+
+      - name: Create 404.html
+        run: cp dist/index.html dist/404.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
