@@ -4,9 +4,12 @@ import { useCallback, useMemo, useState } from "react";
 import {
 	CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis
 } from "recharts";
+import { useDebouncedCallback } from "use-debounce";
 
 import { useDarkMode } from "../providers/DarkModeProvider";
+import { getHistoricalData } from "../services/yahooFinanceService";
 import { usePortfolioStore } from "../store/portfolioStore";
+import { DateRange } from "../types";
 import { calculatePortfolioValue } from "../utils/calculations/portfolioValue";
 import { DateRangePicker } from "./DateRangePicker";
 
@@ -45,11 +48,24 @@ export const PortfolioChart = () => {
     const [hideAssets, setHideAssets] = useState(false);
     const [hiddenAssets, setHiddenAssets] = useState<Set<string>>(new Set());
     const { isDarkMode } = useDarkMode();
-    const { assets, dateRange, updateDateRange } = usePortfolioStore((state) => ({
+    const { assets, dateRange, updateDateRange, updateAssetHistoricalData } = usePortfolioStore((state) => ({
         assets: state.assets,
         dateRange: state.dateRange,
         updateDateRange: state.updateDateRange,
+        updateAssetHistoricalData: state.updateAssetHistoricalData,
     }));
+
+    const fetchHistoricalData = useCallback(
+        async (startDate: string, endDate: string) => {
+            assets.forEach(async (asset) => {
+                const historicalData = await getHistoricalData(asset.symbol, startDate, endDate);
+                updateAssetHistoricalData(asset.id, historicalData);
+            });
+    }, [assets, updateAssetHistoricalData]);
+
+    const debouncedFetchHistoricalData = useDebouncedCallback(fetchHistoricalData, 1500, {
+        maxWait: 5000,
+    });
 
     const assetColors: Record<string, string> = useMemo(() => {
         const usedColors = new Set<string>();
@@ -176,14 +192,20 @@ export const PortfolioChart = () => {
         );
     }, [hideAssets, hiddenAssets, toggleAsset, toggleAllAssets]);
 
+    const handleUpdateDateRange = useCallback((newRange: DateRange) => {
+        updateDateRange(newRange);
+
+        debouncedFetchHistoricalData(newRange.startDate, newRange.endDate);
+    }, [updateDateRange, debouncedFetchHistoricalData]);
+
     const ChartContent = useCallback(() => (
         <>
             <div className="flex justify-between items-center mb-4">
                 <DateRangePicker
                     startDate={dateRange.startDate}
                     endDate={dateRange.endDate}
-                    onStartDateChange={(date) => updateDateRange({ ...dateRange, startDate: date })}
-                    onEndDateChange={(date) => updateDateRange({ ...dateRange, endDate: date })}
+                    onStartDateChange={(date) => handleUpdateDateRange({ ...dateRange, startDate: date })}
+                    onEndDateChange={(date) => handleUpdateDateRange({ ...dateRange, endDate: date })}
                 />
                 <button
                     onClick={() => setIsFullscreen(!isFullscreen)}

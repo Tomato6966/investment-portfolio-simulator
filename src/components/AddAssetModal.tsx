@@ -1,5 +1,6 @@
 import { Search, X } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
+import { useDebouncedCallback } from "use-debounce";
 
 import { getHistoricalData, searchAssets } from "../services/yahooFinanceService";
 import { usePortfolioStore } from "../store/portfolioStore";
@@ -13,26 +14,6 @@ export const AddAssetModal = ({ onClose }: { onClose: () => void }) => {
     addAsset: state.addAsset,
     dateRange: state.dateRange,
   }));
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
-
-  const debouncedSearch = useCallback((query: string) => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      handleSearch(query);
-    }, 500);
-  }, []);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const handleSearch = async (query: string) => {
     if (query.length < 2) return;
@@ -46,6 +27,8 @@ export const AddAssetModal = ({ onClose }: { onClose: () => void }) => {
       setLoading(false);
     }
   };
+
+  const debouncedSearch = useDebouncedCallback(handleSearch, 750);
 
   const handleAssetSelect = async (asset: Asset) => {
     setLoading(true);
