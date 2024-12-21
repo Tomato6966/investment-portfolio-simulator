@@ -38,7 +38,7 @@ interface YahooChartResult {
 }
 
 const isDev = import.meta.env.DEV;
-const API_BASE = isDev ? '/yahoo' : 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://query1.finance.yahoo.com');
+const API_BASE = isDev ? '/yahoo' : 'https://query1.finance.yahoo.com';
 
 export const searchAssets = async (query: string): Promise<Asset[]> => {
   try {
