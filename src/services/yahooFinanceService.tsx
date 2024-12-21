@@ -37,7 +37,8 @@ interface YahooChartResult {
   };
 }
 
-const API_BASE = import.meta.env.VITE_YAHOO_API_URL || '/yahoo';
+const isDev = import.meta.env.DEV;
+const API_BASE = isDev ? '/yahoo' : 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://query1.finance.yahoo.com');
 
 export const searchAssets = async (query: string): Promise<Asset[]> => {
   try {
@@ -47,11 +48,11 @@ export const searchAssets = async (query: string): Promise<Asset[]> => {
       type: 'equity,etf',
     });
 
-    const response = await fetch(`${API_BASE}/v1/finance/lookup?${params}`, {
-      headers: {
-        'Origin': import.meta.env.VITE_YAHOO_ORIGIN || window.location.origin
-      }
-    });
+    const url = isDev
+      ? `${API_BASE}/v1/finance/lookup?${params}`
+      : `${API_BASE}/v1/finance/lookup?${params}`;
+
+    const response = await fetch(url);
     if (!response.ok) throw new Error('Network response was not ok');
 
     const data = await response.json() as YahooSearchResponse;
@@ -96,7 +97,11 @@ export const getHistoricalData = async (symbol: string, startDate: string, endDa
       interval: '1d',
     });
 
-    const response = await fetch(`/yahoo/v8/finance/chart/${symbol}?${params}`);
+    const url = isDev
+      ? `/yahoo/v8/finance/chart/${symbol}?${params}`
+      : `${API_BASE}/v8/finance/chart/${symbol}?${params}`;
+
+    const response = await fetch(url);
     if (!response.ok) throw new Error('Network response was not ok');
 
     const data = await response.json();

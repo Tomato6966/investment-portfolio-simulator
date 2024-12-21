@@ -74,3 +74,51 @@ body {
 html, body {
   background: inherit;
 }
+
+/* Scrollbar Styling für Investment Form */
+.scrollbar-styled {
+  scrollbar-gutter: stable both-edges;
+  overflow-y: scroll !important;
+}
+
+.scrollbar-styled::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  display: block;
+}
+
+.scrollbar-styled::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px;
+}
+
+.scrollbar-styled::-webkit-scrollbar-thumb {
+  background-color: #94a3b8;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  min-height: 40px;
+}
+
+.scrollbar-styled::-webkit-scrollbar-thumb:hover {
+  background-color: #64748b;
+}
+
+/* Dark mode */
+.dark .scrollbar-styled::-webkit-scrollbar-thumb {
+  background-color: #475569;
+}
+
+.dark .scrollbar-styled::-webkit-scrollbar-thumb:hover {
+  background-color: #64748b;
+}
+
+/* Firefox */
+.scrollbar-styled {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 transparent;
+}
+
+.dark .scrollbar-styled {
+  scrollbar-color: #475569 transparent;
+}

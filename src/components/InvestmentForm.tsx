@@ -19,7 +19,7 @@ export const InvestmentFormWrapper = () => {
 
     return (
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow h-full dark:shadow-black/60">
-            <div className="p-6">
+            <div className="p-6 pb-2">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold dark:text-gray-200">Add Investment</h2>
                     {assets.length > 0 && (
@@ -50,8 +50,10 @@ export const InvestmentFormWrapper = () => {
             </div>
             {
                 selectedAsset && (
-                    <div className="overflow-y-scroll scrollbar-styled max-h-[380px] p-6 pr-3">
-                        <InvestmentForm assetId={selectedAsset} />
+                    <div className="flex-1 h-[calc(100%-120px)] overflow-hidden">
+                        <div className="p-6 pr-3 pt-0">
+                            <InvestmentForm assetId={selectedAsset} clearSelectedAsset={() => setSelectedAsset(null)} />
+                        </div>
                     </div>
                 )
             }
@@ -59,7 +61,7 @@ export const InvestmentFormWrapper = () => {
     );
 }
 
-const InvestmentForm = ({ assetId }: { assetId: string }) => {
+const InvestmentForm = ({ assetId, clearSelectedAsset }: { assetId: string, clearSelectedAsset: () => void }) => {
     const [type, setType] = useState<'single' | 'periodic'>('single');
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState('');
@@ -114,6 +116,7 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
         }
         // Reset form
         setAmount('');
+        clearSelectedAsset();
     };
 
     return (
@@ -134,6 +137,7 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
                 <label className="block text-sm font-medium mb-1">Amount (€)</label>
                 <input
                     type="number"
+                    autoFocus
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300"
@@ -168,7 +172,7 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
                             required
                         />
                     </div>
-                    <label className="block text-sm font-medium mb-1">Sparplan-Start Date</label>
+                    <label className="block text-sm font-medium mb-1">SavingsPlan-Start Date</label>
                     <input
                         type="date"
                         value={date}

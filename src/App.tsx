@@ -39,11 +39,11 @@ export default function App() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-8 mb-8 dark:text-gray-300">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-8 dark:text-gray-300">
                     <div className="col-span-3">
                         <PortfolioChart/>
                     </div>
-                    <div className="col-span-1">
+                    <div className="col-span-3 lg:col-span-1">
                         <InvestmentFormWrapper />
                     </div>
                 </div>

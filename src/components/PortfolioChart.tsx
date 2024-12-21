@@ -213,6 +213,12 @@ export const PortfolioChart = () => {
                             tickFormatter={(value) => `${value.toFixed(2)}%`}
                         />
                         <Tooltip
+                            contentStyle={{
+                                backgroundColor: isDarkMode ? '#1e293b' : '#fff',
+                                border: 'none',
+                                color: isDarkMode ? '#d1d5d1' : '#000000',
+                                boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.5)',
+                            }}
                             formatter={(value: number, name: string, item) => {
                                 const assetKey = name.split('_')[0] as keyof typeof assets;
                                 const processedKey = `${assets.find(a => a.name === name.replace(" (%)", ""))?.id}_price`;

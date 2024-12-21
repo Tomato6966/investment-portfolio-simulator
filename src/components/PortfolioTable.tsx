@@ -177,12 +177,12 @@ export const PortfolioTable = () => {
                     {investment?.type === 'periodic' ? (
                       <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
                         <RefreshCw className="w-4 h-4 mr-1" />
-                        Sparplan
+                        SavingsPlan
                       </span>
                     ) : (
                       <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
                         <ShoppingBag className="w-4 h-4 mr-1" />
-                        Einmalig
+                        OneTime
                       </span>
                     )}
                   </td>

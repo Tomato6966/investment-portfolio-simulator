@@ -86,6 +86,7 @@ export const AddAssetModal = ({ onClose }: { onClose: () => void }) => {
             placeholder="Search by symbol or name..."
             className="w-full p-2 pr-10 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300"
             value={search}
+            autoFocus
             onChange={(e) => {
               setSearch(e.target.value);
               debouncedSearch(e.target.value);

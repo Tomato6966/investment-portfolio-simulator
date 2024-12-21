@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
+  const isDev = mode === 'development';
 
   return {
     plugins: [react()],
@@ -12,16 +13,16 @@ export default defineConfig(({ mode }) => {
       exclude: ['lucide-react'],
     },
     server: {
-      proxy: {
+      proxy: isDev ? {
         '/yahoo': {
-          target: env.VITE_YAHOO_API_URL || 'https://query1.finance.yahoo.com',
+          target: 'https://query1.finance.yahoo.com',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/yahoo/, ''),
           headers: {
-            'Origin': env.VITE_YAHOO_ORIGIN || 'https://finance.yahoo.com'
+            'Origin': 'https://finance.yahoo.com'
           }
         }
-      }
+      } : undefined
     },
     base: env.VITE_BASE_URL || '/',
   };
