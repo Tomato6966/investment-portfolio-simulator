@@ -39,7 +39,7 @@ jobs:
         env:
           VITE_BASE_URL: '/${{ github.event.repository.name }}'
           VITE_YAHOO_API_URL: 'https://query1.finance.yahoo.com'
-          VITE_YAHOO_ORIGIN: '/${{ github.event.repository.name }}'
+          VITE_YAHOO_ORIGIN: 'https://tomato6966.github.io/investment-portfolio-simulator/'
 
       - name: Create 404.html
         run: cp dist/index.html dist/404.html
