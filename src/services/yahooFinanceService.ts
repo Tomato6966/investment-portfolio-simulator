@@ -38,7 +38,9 @@ interface YahooChartResult {
 }
 
 const isDev = import.meta.env.DEV;
-const API_BASE = isDev ? '/yahoo' : 'https://query1.finance.yahoo.com';
+const CORS_PROXY = 'https://corsproxy.io/?url=';
+const YAHOO_API = 'https://query1.finance.yahoo.com';
+const API_BASE = isDev ? '/yahoo' : `${CORS_PROXY}${encodeURIComponent(YAHOO_API)}`;
 
 export const searchAssets = async (query: string): Promise<Asset[]> => {
   try {
@@ -48,10 +50,7 @@ export const searchAssets = async (query: string): Promise<Asset[]> => {
       type: 'equity,etf',
     });
 
-    const url = isDev
-      ? `${API_BASE}/v1/finance/lookup?${params}`
-      : `${API_BASE}/v1/finance/lookup?${params}`;
-
+    const url = `${API_BASE}/v1/finance/lookup?${params}`;
     const response = await fetch(url);
     if (!response.ok) throw new Error('Network response was not ok');
 
@@ -97,10 +96,7 @@ export const getHistoricalData = async (symbol: string, startDate: string, endDa
       interval: '1d',
     });
 
-    const url = isDev
-      ? `/yahoo/v8/finance/chart/${symbol}?${params}`
-      : `${API_BASE}/v8/finance/chart/${symbol}?${params}`;
-
+    const url = `${API_BASE}/v8/finance/chart/${symbol}?${params}`;
     const response = await fetch(url);
     if (!response.ok) throw new Error('Network response was not ok');
 

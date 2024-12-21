@@ -12,8 +12,8 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       exclude: ['lucide-react'],
     },
-    server: {
-      proxy: isDev ? {
+    server: isDev ? {
+      proxy: {
         '/yahoo': {
           target: 'https://query1.finance.yahoo.com',
           changeOrigin: true,
@@ -22,8 +22,8 @@ export default defineConfig(({ mode }) => {
             'Origin': 'https://finance.yahoo.com'
           }
         }
-      } : undefined
-    },
+      }
+    } : undefined,
     base: env.VITE_BASE_URL || '/',
   };
 });
