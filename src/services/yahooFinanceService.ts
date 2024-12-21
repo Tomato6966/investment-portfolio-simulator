@@ -37,6 +37,9 @@ interface YahooChartResult {
   };
 }
 
+
+// this is only needed when hosted staticly without a proxy server or smt
+// TODO change it to use the proxy server
 const isDev = import.meta.env.DEV;
 const CORS_PROXY = 'https://corsproxy.io/?url=';
 const YAHOO_API = 'https://query1.finance.yahoo.com';
@@ -50,7 +53,7 @@ export const searchAssets = async (query: string): Promise<Asset[]> => {
       type: 'equity,etf',
     });
 
-    const url = `${API_BASE}/v1/finance/lookup?${params}`;
+    const url = `${API_BASE}/v1/finance/lookup${isDev ? encodeURIComponent(`?${params}`) : `?${params}`}`;
     const response = await fetch(url);
     if (!response.ok) throw new Error('Network response was not ok');
 
@@ -96,7 +99,7 @@ export const getHistoricalData = async (symbol: string, startDate: string, endDa
       interval: '1d',
     });
 
-    const url = `${API_BASE}/v8/finance/chart/${symbol}?${params}`;
+    const url = `${API_BASE}/v8/finance/chart/${symbol}${isDev ? encodeURIComponent(`?${params}`) : `?${params}`}`;
     const response = await fetch(url);
     if (!response.ok) throw new Error('Network response was not ok');
 
