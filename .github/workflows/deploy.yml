@@ -36,6 +36,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_BASE_URL: '/${{ github.event.repository.name }}'
       - name: Create 404.html
         run: cp dist/index.html dist/404.html
 
