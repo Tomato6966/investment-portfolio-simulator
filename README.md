@@ -12,9 +12,7 @@ Why this Project?
   - Portfolio Performance & Value
   - All assets (except the TTWOR and Portfolio-Value) are scaled by percentage of their price. Thus their referenced, scale is on the right. The referenced scale on the left is only for the portfolio-value
 
-![Dark Mode Preview](./docs/dark-mode.png)
-![Light Mode Preview](./docs/light-mode.png)
-![Future Projection Modal](./docs/future-projection.png)
+https://github.com/user-attachments/assets/78b027fa-9883-4813-8086-8b6aa19767de
 
 ## Features
 
@@ -53,6 +51,10 @@ Why this Project?
 3. Run `npm run dev` -> developer preview
   - Run `npm run build` -> build for production (dist folder) (you can then launch it with dockerfile or with a static file server like nginx)
   - Run `npm run preview` -> preview the production build (dist folder)
+
+![Dark Mode Preview](./docs/dark-mode.png)
+![Light Mode Preview](./docs/light-mode.png)
+![Future Projection Modal](./docs/future-projection.png)
 
 ### Credits:
 
