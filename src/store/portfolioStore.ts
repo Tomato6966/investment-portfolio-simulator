@@ -15,6 +15,7 @@ interface PortfolioState {
   updateAssetHistoricalData: (assetId: string, historicalData: HistoricalData[]) => void;
   updateInvestment: (assetId: string, investmentId: string, updatedInvestment: Investment) => void;
   clearInvestments: () => void;
+  setAssets: (assets: Asset[]) => void;
 }
 
 export const usePortfolioStore = create<PortfolioState>((set) => ({
@@ -77,4 +78,5 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
     set((state) => ({
       assets: state.assets.map((asset) => ({ ...asset, investments: [] })),
     })),
+  setAssets: (assets) => set({ assets }),
 }));

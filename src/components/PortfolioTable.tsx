@@ -1,11 +1,12 @@
 import { format } from "date-fns";
-import { HelpCircle, Pencil, RefreshCw, ShoppingBag, Trash2 } from "lucide-react";
+import { HelpCircle, LineChart, Pencil, RefreshCw, ShoppingBag, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { usePortfolioStore } from "../store/portfolioStore";
 import { Investment } from "../types";
 import { calculateInvestmentPerformance } from "../utils/calculations/performance";
 import { EditInvestmentModal } from "./EditInvestmentModal";
+import { FutureProjectionModal } from "./FutureProjectionModal";
 
 interface TooltipProps {
     content: string | JSX.Element;
@@ -49,7 +50,7 @@ export const PortfolioTable = () => {
   const performance = useMemo(() => calculateInvestmentPerformance(assets), [assets]);
 
   const averagePerformance = useMemo(() => {
-    return (performance.investments.reduce((sum, inv) => sum + inv.performancePercentage, 0) / performance.investments.length).toFixed(2);
+    return ((performance.investments.reduce((sum, inv) => sum + inv.performancePercentage, 0) / performance.investments.length) || 0).toFixed(2);
   }, [performance.investments]);
 
   const handleDelete = useCallback((investmentId: string, assetId: string) => {
@@ -67,13 +68,14 @@ export const PortfolioTable = () => {
   const performanceTooltip = useMemo(() => (
     <div className="space-y-2">
         <p>The performance of your portfolio is {performance.summary.performancePercentage.toFixed(2)}%</p>
-        <p>The average performance of all positions is {averagePerformance}%</p>
+        <p>The average (acc.) performance of all positions is {averagePerformance}%</p>
+        <p>The average (p.a.) performance of every year is {performance.summary.performancePerAnnoPerformance.toFixed(2)}%</p>
         <p className="text-xs mt-2">
             Note: An average performance of positions doesn't always match your entire portfolio's average,
             especially with single investments or investments on different time ranges.
         </p>
     </div>
-  ), [performance.summary.performancePercentage, averagePerformance]);
+  ), [performance.summary.performancePercentage, averagePerformance, performance.summary.performancePerAnnoPerformance]);
 
   const buyInTooltip = useMemo(() => (
     <div className="space-y-2">
@@ -95,16 +97,29 @@ export const PortfolioTable = () => {
     </div>
   ), []);
 
+  const [showProjection, setShowProjection] = useState(false);
+
   return (
     <div className="overflow-x-auto min-h-[500px] dark:text-gray-300 p-4 border-gray-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-800 shadow-lg dark:shadow-black/60">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold dark:text-gray-100">Portfolio's <u>Positions</u> Overview</h2>
-        <button
-          onClick={handleClearAll}
-          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-        >
-          Clear All Investments
-        </button>
+        <div className="flex gap-2">
+            <button
+                onClick={handleClearAll}
+                disabled={performance.investments.length === 0}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+            Clear All Investments
+            </button>
+            <button
+                onClick={() => setShowProjection(true)}
+                disabled={performance.investments.length === 0}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
+            >
+                <LineChart size={16} />
+                Future Projection
+            </button>
+        </div>
       </div>
       <div className="relative rounded-lg overflow-hidden">
         <table className="min-w-full bg-white dark:bg-slate-800">
@@ -145,7 +160,10 @@ export const PortfolioTable = () => {
                 <td className="px-4 py-2"></td>
                 <td className="px-4 py-2">
                   {performance.summary.performancePercentage.toFixed(2)}%
-                  <i className="text-xs text-gray-500 dark:text-gray-400">(avg. {averagePerformance}%)</i>
+                  <ul>
+                    <li className="text-xs text-gray-500 dark:text-gray-400"> (avg. acc. {averagePerformance}%)</li>
+                    <li className="text-xs text-gray-500 dark:text-gray-400"> (avg. p.a. {performance.summary.performancePerAnnoPerformance.toFixed(2)}%)</li>
+                  </ul>
                 </td>
                 <td className="px-4 py-2"></td>
                 </tr>
@@ -154,7 +172,7 @@ export const PortfolioTable = () => {
                 <tr className="italic dark:text-gray-500 border-t border-gray-200 dark:border-slate-600 ">
                     <td className="px-4 py-2">TTWOR</td>
                     <td className="px-4 py-2"></td>
-                    <td className="px-4 py-2">{performance.investments[0]?.date}</td>
+                    <td className="px-4 py-2">{new Date(performance.investments[0]?.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                     <td className="px-4 py-2">€{performance.summary.totalInvested.toFixed(2)}</td>
                     <td className="px-4 py-2">€{performance.summary.ttworValue.toFixed(2)}</td>
                     <td className="px-4 py-2"></td>
@@ -219,6 +237,9 @@ export const PortfolioTable = () => {
           assetId={editingInvestment.assetId}
           onClose={() => setEditingInvestment(null)}
         />
+      )}
+      {showProjection && (
+        <FutureProjectionModal performancePerAnno={performance.summary.performancePerAnnoPerformance} onClose={() => setShowProjection(false)} />
       )}
     </div>
   );

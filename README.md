@@ -14,6 +14,7 @@ Why this Project?
 
 ![Dark Mode Preview](./docs/dark-mode.png)
 ![Light Mode Preview](./docs/light-mode.png)
+![Future Projection Modal](./docs/future-projection.png)
 
 ## Features
 
@@ -26,6 +27,7 @@ Why this Project?
 - 💹 TTWOR (Time Travel Without Risk) calculations
 - 🔄 Support for one-time and periodic investments
 - 📊 Detailed performance metrics
+- 📅 Future Projection with Withdrawal Analysis and Sustainability Analysis
 
 ## Tech Stack
 
@@ -47,3 +49,11 @@ Why this Project?
 ### Local Development
 
 1. Clone the repository
+2. Run `npm install`
+3. Run `npm run dev` -> developer preview
+  - Run `npm run build` -> build for production (dist folder) (you can then launch it with dockerfile or with a static file server like nginx)
+  - Run `npm run preview` -> preview the production build (dist folder)
+
+### Credits:
+
+> Thanks to [yahoofinance](https://finance.yahoo.com/) for the stock data.

@@ -1,4 +1,4 @@
-import { isAfter, isBefore } from "date-fns";
+import { differenceInDays, isAfter, isBefore } from "date-fns";
 
 import { Asset } from "../../types";
 
@@ -18,6 +18,7 @@ export interface PortfolioPerformance {
         totalInvested: number;
         currentValue: number;
         performancePercentage: number;
+        performancePerAnnoPerformance: number;
         ttworValue: number;
         ttworPercentage: number;
     };
@@ -27,6 +28,7 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
     const investments: InvestmentPerformance[] = [];
     let totalInvested = 0;
     let totalCurrentValue = 0;
+    let earliestDate: Date | null = null;
 
     // TTWOR Berechnung
     const firstDayPrices: Record<string, number> = {};
@@ -48,6 +50,16 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
         }
         return acc;
     }, 0);
+
+    // Finde das früheste Investmentdatum
+    for(const asset of assets) {
+        for(const investment of asset.investments) {
+            const investmentDate = new Date(investment.date!);
+            if (!earliestDate || isBefore(investmentDate, earliestDate)) {
+                earliestDate = investmentDate;
+            }
+        }
+    }
 
     // Normale Performance-Berechnungen...
     for(const asset of assets) {
@@ -90,6 +102,21 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
         ? ((ttworValue - totalInvested) / totalInvested) * 100
         : 0;
 
+    // Berechne die jährliche Performance
+    const performancePerAnnoPerformance = (() => {
+        if (!earliestDate || totalInvested === 0) return 0;
+
+        const years = differenceInDays(new Date(), earliestDate) / 365;
+        if (years < 0.01) return 0; // Verhindere Division durch sehr kleine Zahlen
+
+        // Formel: (1 + r)^n = FV/PV
+        // r = (FV/PV)^(1/n) - 1
+        const totalReturn = totalCurrentValue / totalInvested;
+        const annualizedReturn = Math.pow(totalReturn, 1 / years) - 1;
+
+        return annualizedReturn * 100;
+    })();
+
     return {
         investments,
         summary: {
@@ -98,6 +125,7 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
             performancePercentage: totalInvested > 0
                 ? ((totalCurrentValue - totalInvested) / totalInvested) * 100
                 : 0,
+            performancePerAnnoPerformance,
             ttworValue,
             ttworPercentage,
         },

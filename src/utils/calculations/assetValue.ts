@@ -1,4 +1,4 @@
-import { addDays, isAfter, isBefore, isSameDay } from "date-fns";
+import { isAfter, isBefore, isSameDay } from "date-fns";
 
 import { Asset, Investment } from "../../types";
 
@@ -51,13 +51,15 @@ export const calculateAssetValueAtDate = (asset: Asset, date: Date, currentPrice
     }
 };
 
-export const generatePeriodicInvestments = (settings: PeriodicSettings, endDate: Date, assetId: string): Investment[] => {
+export const generatePeriodicInvestments = (settings: PeriodicSettings, endDate: string, assetId: string): Investment[] => {
     const investments: Investment[] = [];
+    const periodicGroupId = crypto.randomUUID();
     let currentDate = new Date(settings.startDate);
     let currentAmount = settings.amount;
-    const periodicGroupId = crypto.randomUUID();
+    const end = new Date(endDate);
 
-    while (isBefore(currentDate, endDate)) {
+    while (currentDate <= end) {
+        // Only create investment if it's on the specified day of month
         if (currentDate.getDate() === settings.dayOfMonth) {
             // Handle dynamic increases if configured
             if (settings.dynamic) {
@@ -65,7 +67,8 @@ export const generatePeriodicInvestments = (settings: PeriodicSettings, endDate:
                     (currentDate.getTime() - new Date(settings.startDate).getTime()) /
                     (1000 * 60 * 60 * 24 * 365);
 
-                if (yearsSinceStart >= settings.dynamic.yearInterval) {
+                // Check if we've reached a year interval for increase
+                if (yearsSinceStart > 0 && yearsSinceStart % settings.dynamic.yearInterval === 0) {
                     if (settings.dynamic.type === 'percentage') {
                         currentAmount *= (1 + settings.dynamic.value / 100);
                     } else {
@@ -73,7 +76,7 @@ export const generatePeriodicInvestments = (settings: PeriodicSettings, endDate:
                     }
                 }
             }
-            // Create investment for this date
+
             investments.push({
                 id: crypto.randomUUID(),
                 type: 'periodic',
@@ -82,13 +85,20 @@ export const generatePeriodicInvestments = (settings: PeriodicSettings, endDate:
                 periodicGroupId,
                 assetId
             });
-
-            // Move to next interval
-            currentDate = addDays(currentDate, settings.interval);
-        } else {
-            // Move to next day if not the investment day
-            currentDate = addDays(currentDate, 1);
         }
+
+        // Move to next interval day
+        const nextDate = new Date(currentDate);
+        nextDate.setDate(nextDate.getDate() + settings.interval);
+
+        // Ensure we maintain the correct day of month
+        if (nextDate.getDate() !== settings.dayOfMonth) {
+            nextDate.setDate(1);
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            nextDate.setDate(settings.dayOfMonth);
+        }
+
+        currentDate = nextDate;
     }
 
     return investments;
