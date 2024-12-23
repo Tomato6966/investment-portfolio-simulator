@@ -12,8 +12,7 @@ Why this Project?
   - Portfolio Performance & Value
   - All assets (except the TTWOR and Portfolio-Value) are scaled by percentage of their price. Thus their referenced, scale is on the right. The referenced scale on the left is only for the portfolio-value
 
-https://github.com/user-attachments/assets/78b027fa-9883-4813-8086-8b6aa19767de
-
+https://github.com/user-attachments/assets/4507e102-8dfb-4614-b2ba-938e20e3d97b
 
 ## Features
 

@@ -1,4 +1,4 @@
-import { differenceInDays, isAfter, isBefore } from "date-fns";
+import { isAfter, isBefore } from "date-fns";
 
 import type { Asset, InvestmentPerformance, PortfolioPerformance } from "../../types";
 
@@ -166,20 +166,23 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
         : 0;
 
     // Berechne die jährliche Performance
-    const performancePerAnnoPerformance = (() => {
-        if (!earliestDate || totalInvested === 0) return 0;
+    // const performancePerAnnoPerformance = (() => {
+    //     if (!earliestDate || totalInvested === 0) return 0;
 
-        const years = differenceInDays(new Date(), earliestDate) / 365;
-        if (years < 0.01) return 0; // Verhindere Division durch sehr kleine Zahlen
+    //     const years = differenceInDays(new Date(), earliestDate) / 365;
+    //     if (years < 0.01) return 0; // Verhindere Division durch sehr kleine Zahlen
 
-        // Formel: (1 + r)^n = FV/PV
-        // r = (FV/PV)^(1/n) - 1
-        const totalReturn = totalCurrentValue / totalInvested;
-        const annualizedReturn = Math.pow(totalReturn, 1 / years) - 1;
+    //     // Formel: (1 + r)^n = FV/PV
+    //     // r = (FV/PV)^(1/n) - 1
+    //     const totalReturn = totalCurrentValue / totalInvested;
+    //     const annualizedReturn = Math.pow(totalReturn, 1 / years) - 1;
 
-        return annualizedReturn * 100;
-    })();
+    //     return annualizedReturn * 100;
+    // })();
 
+    const performancePerAnnoPerformance = annualPerformances.reduce((acc, curr) => acc + curr.percentage, 0) / annualPerformances.length;
+
+    console.log(performancePerAnnoPerformance, annualPerformances);
     return {
         investments,
         summary: {
