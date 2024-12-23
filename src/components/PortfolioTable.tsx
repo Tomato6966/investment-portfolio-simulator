@@ -14,6 +14,16 @@ import { EditSavingsPlanModal } from "./Modals/EditSavingsPlanModal";
 import { FutureProjectionModal } from "./Modals/FutureProjectionModal";
 import { Tooltip } from "./utils/ToolTip";
 
+interface SavingsPlanPerformance {
+    assetName: string;
+    amount: number;
+    totalInvested: number;
+    currentValue: number;
+    performancePercentage: number;
+    performancePerAnnoPerformance: number;
+    allocation?: number;
+}
+
 export default function PortfolioTable() {
     const { assets, removeInvestment, clearInvestments } = usePortfolioSelector((state) => ({
         assets: state.assets,
@@ -110,9 +120,17 @@ export default function PortfolioTable() {
 
     const savingsPlansPerformance = useMemo(() => {
         if(isSavingsPlanOverviewDisabled) return [];
-        const performance = [];
+        const performance: SavingsPlanPerformance[] = [];
+        const totalSavingsPlansAmount = assets
+            .map(v => v.investments)
+            .flat()
+            .filter(inv => inv.type === 'periodic')
+            .reduce((sum, inv) => sum + inv.amount, 0);
+
+        // Second pass to calculate individual performances with allocation
         for (const asset of assets) {
             const savingsPlans = asset.investments.filter(inv => inv.type === 'periodic');
+            const amount = savingsPlans.reduce((sum, inv) => sum + inv.amount, 0);
             if (savingsPlans.length > 0) {
                 const assetPerformance = calculateInvestmentPerformance([{
                     ...asset,
@@ -121,12 +139,34 @@ export default function PortfolioTable() {
                 performance.push({
                     assetName: asset.name,
                     amount: savingsPlans[0].amount,
-                    ...assetPerformance.summary
+                    ...assetPerformance.summary,
+                    allocation: amount / totalSavingsPlansAmount * 100
                 });
             }
         }
         return performance;
     }, [assets, isSavingsPlanOverviewDisabled]);
+
+    const savingsPlansSummary = useMemo(() => {
+        if (savingsPlansPerformance.length === 0) return null;
+
+        const totalCurrentValue = savingsPlansPerformance.reduce((sum, plan) => sum + plan.currentValue, 0);
+        const totalInvested = savingsPlansPerformance.reduce((sum, plan) => sum + plan.totalInvested, 0);
+        const weightedPerformance = savingsPlansPerformance.reduce((sum, plan) => {
+            return sum + (plan.performancePercentage * (plan.currentValue / totalCurrentValue));
+        }, 0);
+        const weightedPerformancePA = savingsPlansPerformance.reduce((sum, plan) => {
+            return sum + (plan.performancePerAnnoPerformance * (plan.currentValue / totalCurrentValue));
+        }, 0);
+
+        return {
+            totalAmount: savingsPlansPerformance.reduce((sum, plan) => sum + plan.amount, 0),
+            totalInvested,
+            totalCurrentValue,
+            weightedPerformance,
+            weightedPerformancePA,
+        };
+    }, [savingsPlansPerformance]);
 
     const handleGeneratePDF = async () => {
         setIsGeneratingPDF(true);
@@ -224,6 +264,7 @@ export default function PortfolioTable() {
                                 <tr className="bg-gray-100 dark:bg-slate-700 text-left">
                                     <th className="px-4 py-2 first:rounded-tl-lg">Asset</th>
                                     <th className="px-4 py-2">Interval Amount</th>
+                                    <th className="px-4 py-2">Allocation</th>
                                     <th className="px-4 py-2">Total Invested</th>
                                     <th className="px-4 py-2">Current Value</th>
                                     <th className="px-4 py-2">Performance (%)</th>
@@ -232,7 +273,19 @@ export default function PortfolioTable() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {savingsPlansPerformance.map((plan) => {
+                                {savingsPlansSummary && (
+                                    <tr className="font-bold bg-gray-50 dark:bg-slate-700 border-t border-gray-200 dark:border-slate-600">
+                                        <td className="px-4 py-2">Total</td>
+                                        <td className="px-4 py-2">€{savingsPlansSummary.totalAmount.toFixed(2)}</td>
+                                        <td className="px-4 py-2">100%</td>
+                                        <td className="px-4 py-2">€{savingsPlansSummary.totalInvested.toFixed(2)}</td>
+                                        <td className="px-4 py-2">€{savingsPlansSummary.totalCurrentValue.toFixed(2)}</td>
+                                        <td className="px-4 py-2">{savingsPlansSummary.weightedPerformance.toFixed(2)}%</td>
+                                        <td className="px-4 py-2">{savingsPlansSummary.weightedPerformancePA.toFixed(2)}%</td>
+                                        <td className="px-4 py-2"></td>
+                                    </tr>
+                                )}
+                                {savingsPlansPerformance.sort((a, b) => Number(b.allocation || 0) - Number(a.allocation || 0)).map((plan) => {
                                     const asset = assets.find(a => a.name === plan.assetName)!;
                                     const firstInvestment = asset.investments.find(inv => inv.type === 'periodic')!;
                                     const groupId = firstInvestment.periodicGroupId!;
@@ -240,7 +293,8 @@ export default function PortfolioTable() {
                                     return (
                                         <tr key={plan.assetName} className="border-t border-gray-200 dark:border-slate-600">
                                             <td className="px-4 py-2">{plan.assetName}</td>
-                                            <td className="px-4 py-2">{plan.amount}</td>
+                                            <td className="px-4 py-2">€{plan.amount.toFixed(2)}</td>
+                                            <td className="px-4 py-2">{plan.allocation?.toFixed(2)}%</td>
                                             <td className="px-4 py-2">€{plan.totalInvested.toFixed(2)}</td>
                                             <td className="px-4 py-2">€{plan.currentValue.toFixed(2)}</td>
                                             <td className="px-4 py-2">{plan.performancePercentage.toFixed(2)}%</td>

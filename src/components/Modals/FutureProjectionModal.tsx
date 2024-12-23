@@ -282,20 +282,47 @@ export const FutureProjectionModal = ({
     const renderScenarioDescription = () => {
         if (!scenarios.best.projection.length) return null;
 
+        const getLastValue = (projection: ProjectionData[]) => {
+            const lastPoint = projection[projection.length - 1];
+            return {
+                value: lastPoint.value,
+                invested: lastPoint.invested,
+                returnPercentage: ((lastPoint.value - lastPoint.invested) / lastPoint.invested) * 100
+            };
+        };
+
+        const baseCase = getLastValue(projectionData);
+        const bestCase = getLastValue(scenarios.best.projection);
+        const worstCase = getLastValue(scenarios.worst.projection);
+
         return (
             <div className="mb-4 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg text-sm">
                 <h4 className="font-semibold mb-2 dark:text-gray-200">Scenario Calculations</h4>
                 <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                     <li>
-                        <span className="font-medium text-indigo-600 dark:text-indigo-400">Avg. Base Case:</span> Using historical average return of <span className="font-bold underline">{performancePerAnno.toFixed(2)}%</span>
+                        <span className="font-medium text-indigo-600 dark:text-indigo-400">Avg. Base Case:</span> Using historical average return of{' '}
+                        <span className="font-bold underline">{performancePerAnno.toFixed(2)}%</span>
+                        <i className="block text-gray-300 dark:text-gray-500">
+                            After {years} years you'd have{' '}
+                            <span className="font-bold">{formatCurrency(baseCase.value)}</span> from {formatCurrency(baseCase.invested)} invested,{' '}
+                            that's a total return of <span className="font-bold">{baseCase.returnPercentage.toFixed(2)}%</span>
+                        </i>
                     </li>
                     <li>
                         <span className="font-medium text-green-600 dark:text-green-400">Best Case:</span> Average of top 50% performing years ({scenarios.best.avaragedAmount} years) at {scenarios.best.percentage.toFixed(2)}%,
-                        averaged with base case to <span className="font-semibold underline">{scenarios.best.percentageAveraged.toFixed(2)}%</span>
+                        averaged with base case to <span className="font-semibold underline">{scenarios.best.percentageAveraged.toFixed(2)}%</span>.{' '}
+                        <i className="block text-gray-300 dark:text-gray-500">
+                            After {years} years you'd have <span className="font-bold">{formatCurrency(bestCase.value)}</span> from {formatCurrency(bestCase.invested)} invested,{' '}
+                            that's a total return of <span className="font-bold">{bestCase.returnPercentage.toFixed(2)}%</span>
+                        </i>
                     </li>
                     <li>
                         <span className="font-medium text-red-600 dark:text-red-400">Worst Case:</span> Average of bottom 50% performing years ({scenarios.worst.avaragedAmount} years) at {scenarios.worst.percentage.toFixed(2)}%,
-                        averaged with base case to <span className="font-semibold underline">{scenarios.worst.percentageAveraged.toFixed(2)}%</span>
+                        averaged with base case to <span className="font-semibold underline">{scenarios.worst.percentageAveraged.toFixed(2)}%</span>.{' '}
+                        <i className="block text-gray-300 dark:text-gray-500">
+                        After {years} years you'd have <span className="font-bold">{formatCurrency(worstCase.value)}</span> from {formatCurrency(worstCase.invested)} invested,{' '}
+                        that's a total return of <span className="font-bold">{worstCase.returnPercentage.toFixed(2)}%</span>
+                        </i>
                     </li>
                 </ul>
             </div>

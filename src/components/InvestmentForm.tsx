@@ -54,7 +54,7 @@ export default function InvestmentFormWrapper() {
                 selectedAsset && (
                     <div className="flex-1 h-[calc(100%-120px)] overflow-hidden">
                         <div className="p-6 pr-3 pt-0">
-                            <InvestmentForm assetId={selectedAsset} clearSelectedAsset={() => setSelectedAsset(null)} />
+                            <InvestmentForm assetId={selectedAsset} />
                         </div>
                     </div>
                 )
@@ -63,7 +63,7 @@ export default function InvestmentFormWrapper() {
     );
 }
 
-const InvestmentForm = ({ assetId, clearSelectedAsset }: { assetId: string, clearSelectedAsset: () => void }) => {
+const InvestmentForm = ({ assetId }: { assetId: string }) => {
     const [type, setType] = useState<'single' | 'periodic'>('single');
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState('');
@@ -80,7 +80,7 @@ const InvestmentForm = ({ assetId, clearSelectedAsset }: { assetId: string, clea
         addInvestment: state.addInvestment,
     }));
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -90,7 +90,7 @@ const InvestmentForm = ({ assetId, clearSelectedAsset }: { assetId: string, clea
 
         setIsSubmitting(true);
 
-        setTimeout(async () => {
+        setTimeout(() => {
             console.log("timeout")
             try {
                 if (type === "single") {
@@ -136,7 +136,6 @@ const InvestmentForm = ({ assetId, clearSelectedAsset }: { assetId: string, clea
                 console.timeEnd('generatePeriodicInvestments');
                 setIsSubmitting(false);
                 setAmount('');
-                clearSelectedAsset();
             }
         }, 10);
     };
