@@ -52,7 +52,7 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
         const yearStart = new Date(year, 0, 1); // 1. Januar
         const yearEnd = year === endYear ? new Date(year, now.getMonth(), now.getDate()) : new Date(year, 11, 31); // Aktuelles Datum oder 31. Dez.
 
-        const investmentsPerformances:number[] = [];
+        const yearInvestments: { percent: number; weight: number }[] = [];
 
         for (const asset of assets) {
             // Get prices for the start and end of the year
@@ -67,7 +67,7 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
 
             if (startPrice === 0 || endPrice === 0) {
                 console.warn(`Skipping asset for year ${year} due to missing start or end price`);
-                continue; // Überspringe, wenn keine Daten vorhanden
+                continue;
             }
 
             // Get all investments made before or during this year
@@ -88,19 +88,23 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
                     (data) => isAfter(new Date(data.date), new Date(investment.date!))
                 ).find((v) => v.price !== 0)?.price || 0;
 
-
                 if (buyInPrice > 0) {
-                    const shares = investment.amount / buyInPrice; // Berechne Anzahl der Shares
+                    const shares = investment.amount / buyInPrice;
                     const endValue = shares * endPrice;
                     const startValue = shares * startPrice;
-                    investmentsPerformances.push((endValue - startValue) / startValue * 100);
+                    yearInvestments.push({
+                        percent: ((endValue - startValue) / startValue) * 100,
+                        weight: startValue
+                    });
                 }
             }
         }
 
-        // Calculate performance for the year
-        if (investmentsPerformances.length > 0) {
-            const percentage = investmentsPerformances.reduce((acc, curr) => acc + curr, 0) / investmentsPerformances.length;
+        // Calculate weighted average performance for the year
+        if (yearInvestments.length > 0) {
+            const totalWeight = yearInvestments.reduce((sum, inv) => sum + inv.weight, 0);
+            const percentage = yearInvestments.reduce((sum, inv) =>
+                sum + (inv.percent * (inv.weight / totalWeight)), 0);
 
             if (!isNaN(percentage)) {
                 annualPerformances.push({ year, percentage });

@@ -3,12 +3,14 @@ import {
 	Download, FileDown, LineChart, Loader2, Pencil, RefreshCw, ShoppingBag, Trash2
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 
 import { usePortfolioSelector } from "../hooks/usePortfolio";
 import { Investment } from "../types";
 import { calculateInvestmentPerformance } from "../utils/calculations/performance";
 import { downloadTableAsCSV, generatePortfolioPDF } from "../utils/export";
 import { EditInvestmentModal } from "./Modals/EditInvestmentModal";
+import { EditSavingsPlanModal } from "./Modals/EditSavingsPlanModal";
 import { FutureProjectionModal } from "./Modals/FutureProjectionModal";
 import { Tooltip } from "./utils/ToolTip";
 
@@ -23,8 +25,20 @@ export default function PortfolioTable() {
         investment: Investment;
         assetId: string;
     } | null>(null);
-    const [showSavingsPlans, setShowSavingsPlans] = useState(true);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+    const [isUpdatingSavingsPlan, setIsUpdatingSavingsPlan] = useState(false);
+    const [editingSavingsPlan, setEditingSavingsPlan] = useState<{
+        assetId: string;
+        groupId: string;
+        amount: number;
+        dayOfMonth: number;
+        interval: number;
+        dynamic?: {
+            type: 'percentage' | 'fixed';
+            value: number;
+            yearInterval: number;
+        };
+    } | null>(null);
 
     const performance = useMemo(() => calculateInvestmentPerformance(assets), [assets]);
 
@@ -34,13 +48,23 @@ export default function PortfolioTable() {
 
     const handleDelete = useCallback((investmentId: string, assetId: string) => {
         if (window.confirm("Are you sure you want to delete this investment?")) {
-            removeInvestment(assetId, investmentId);
+            try {
+                removeInvestment(assetId, investmentId);
+                toast.success('Investment deleted successfully');
+            } catch (error:any) {
+                toast.error('Failed to delete investment' + String(error?.message || error));
+            }
         }
     }, [removeInvestment]);
 
     const handleClearAll = useCallback(() => {
         if (window.confirm("Are you sure you want to clear all investments?")) {
-            clearInvestments();
+            try {
+                clearInvestments();
+                toast.success('All investments cleared successfully');
+            } catch (error:any) {
+                toast.error('Failed to clear investments' + String(error?.message || error));
+            }
         }
     }, [clearInvestments]);
 
@@ -113,10 +137,38 @@ export default function PortfolioTable() {
                 savingsPlansPerformance,
                 performance.summary.performancePerAnnoPerformance
             );
+            toast.success('PDF generated successfully');
+        } catch (error:any) {
+            toast.error('Failed to generate PDF' + String(error?.message || error));
         } finally {
             setIsGeneratingPDF(false);
         }
     };
+
+    const handleDeleteSavingsPlan = useCallback((assetId: string, groupId: string) => {
+        if (window.confirm("Are you sure you want to delete this savings plan? All related investments will be removed.")) {
+            try {
+                setIsUpdatingSavingsPlan(true);
+                setTimeout(() => {
+                    try {
+                        const asset = assets.find(a => a.id === assetId);
+                        if (!asset) throw new Error('Asset not found');
+                        const investments = asset.investments.filter(inv => inv.periodicGroupId === groupId);
+                        investments.forEach(inv => {
+                            removeInvestment(assetId, inv.id);
+                        });
+                        toast.success('Savings plan deleted successfully');
+                    } catch (error:any) {
+                        toast.error('Failed to delete savings plan: ' + String(error?.message || error));
+                    } finally {
+                        setIsUpdatingSavingsPlan(false);
+                    }
+                }, 10);
+            } catch (error:any) {
+                toast.error('Failed to delete savings plan: ' + String(error?.message || error));
+            }
+        }
+    }, [assets, removeInvestment]);
 
     return (
         <div className="space-y-4">
@@ -141,15 +193,6 @@ export default function PortfolioTable() {
                         </button>
 
                         <button
-                            onClick={() => setShowSavingsPlans(prev => !prev)}
-                            disabled={isSavingsPlanOverviewDisabled}
-                            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            <RefreshCw size={16} />
-                            {showSavingsPlans ? 'Hide' : 'Show'} Savings Plans Performance
-                        </button>
-
-                        <button
                             onClick={handleGeneratePDF}
                             className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={performance.investments.length === 0 || isGeneratingPDF}
@@ -164,7 +207,7 @@ export default function PortfolioTable() {
                     </div>
                 </div>
 
-                {!isSavingsPlanOverviewDisabled && showSavingsPlans && savingsPlansPerformance.length > 0 && (
+                {!isSavingsPlanOverviewDisabled && savingsPlansPerformance.length > 0 && (
                     <div className="overflow-x-auto mb-4 dark:text-gray-300 p-4 border-gray-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-800 shadow-lg dark:shadow-black/60">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-bold">Savings Plans Performance</h3>
@@ -184,20 +227,57 @@ export default function PortfolioTable() {
                                     <th className="px-4 py-2">Total Invested</th>
                                     <th className="px-4 py-2">Current Value</th>
                                     <th className="px-4 py-2">Performance (%)</th>
-                                    <th className="px-4 py-2 last:rounded-tr-lg">Performance (p.a.)</th>
+                                    <th className="px-4 py-2">Performance (p.a.)</th>
+                                    <th className="px-4 py-2 last:rounded-tr-lg">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {savingsPlansPerformance.map((plan) => (
-                                    <tr key={plan.assetName} className="border-t border-gray-200 dark:border-slate-600">
-                                        <td className="px-4 py-2">{plan.assetName}</td>
-                                        <td className="px-4 py-2">{plan.amount}</td>
-                                        <td className="px-4 py-2">€{plan.totalInvested.toFixed(2)}</td>
-                                        <td className="px-4 py-2">€{plan.currentValue.toFixed(2)}</td>
-                                        <td className="px-4 py-2">{plan.performancePercentage.toFixed(2)}%</td>
-                                        <td className="px-4 py-2">{plan.performancePerAnnoPerformance.toFixed(2)}%</td>
-                                    </tr>
-                                ))}
+                                {savingsPlansPerformance.map((plan) => {
+                                    const asset = assets.find(a => a.name === plan.assetName)!;
+                                    const firstInvestment = asset.investments.find(inv => inv.type === 'periodic')!;
+                                    const groupId = firstInvestment.periodicGroupId!;
+
+                                    return (
+                                        <tr key={plan.assetName} className="border-t border-gray-200 dark:border-slate-600">
+                                            <td className="px-4 py-2">{plan.assetName}</td>
+                                            <td className="px-4 py-2">{plan.amount}</td>
+                                            <td className="px-4 py-2">€{plan.totalInvested.toFixed(2)}</td>
+                                            <td className="px-4 py-2">€{plan.currentValue.toFixed(2)}</td>
+                                            <td className="px-4 py-2">{plan.performancePercentage.toFixed(2)}%</td>
+                                            <td className="px-4 py-2">{plan.performancePerAnnoPerformance.toFixed(2)}%</td>
+                                            <td className="px-4 py-2">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => setEditingSavingsPlan({
+                                                            assetId: asset.id,
+                                                            groupId,
+                                                            amount: firstInvestment.amount,
+                                                            dayOfMonth: parseInt(firstInvestment.date!.split('-')[2]),
+                                                            interval: 30, // You might want to store this in the investment object
+                                                            // Add dynamic settings if available
+                                                        })}
+                                                        className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
+                                                    >
+                                                        {isUpdatingSavingsPlan || editingSavingsPlan ? (
+                                                            <Loader2 className="animate-spin" size={16} />
+                                                        ) : (<Pencil className="w-4 h-4" />
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteSavingsPlan(asset.id, groupId)}
+                                                        className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded text-red-500 transition-colors"
+                                                    >
+                                                        {isUpdatingSavingsPlan || editingSavingsPlan ? (
+                                                            <Loader2 className="animate-spin" size={16} />
+                                                        ) : (
+                                                            <Trash2 className="w-4 h-4" />
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -276,10 +356,10 @@ export default function PortfolioTable() {
                                             <td className="px-4 py-2">
                                                 {performance.summary.performancePercentage.toFixed(2)}%
                                                 <ul>
-                                                    <li className="text-xs text-gray-500 dark:text-gray-400"> (avg. acc. {averagePerformance}%)</li>
-                                                    <li className="text-xs text-gray-500 dark:text-gray-400"> (avg. p.a. {performance.summary.performancePerAnnoPerformance.toFixed(2)}%)</li>
-                                                    <li className="text-xs text-gray-500 dark:text-gray-400"> (best p.a. {performance.summary.bestPerformancePerAnno?.[0]?.percentage?.toFixed(2) || "0.00"}% {performance.summary.bestPerformancePerAnno?.[0]?.year || "N/A"})</li>
-                                                    <li className="text-xs text-gray-500 dark:text-gray-400"> (worst p.a. {performance.summary.worstPerformancePerAnno?.[0]?.percentage?.toFixed(2) || "0.00"}% {performance.summary.worstPerformancePerAnno?.[0]?.year || "N/A"})</li>
+                                                    <li className="text-xs text-gray-500 dark:text-gray-400">(avg. acc. {averagePerformance}%)</li>
+                                                    <li className="text-xs text-gray-500 dark:text-gray-400">(avg. p.a. {performance.summary.performancePerAnnoPerformance.toFixed(2)}%)</li>
+                                                    <li className="text-[10px] text-gray-500 dark:text-gray-400 italic">(best p.a. {performance.summary.bestPerformancePerAnno?.[0]?.percentage?.toFixed(2) || "0.00"}% {performance.summary.bestPerformancePerAnno?.[0]?.year || "N/A"})</li>
+                                                    <li className="text-[10px] text-gray-500 dark:text-gray-400 italic">(worst p.a. {performance.summary.worstPerformancePerAnno?.[0]?.percentage?.toFixed(2) || "0.00"}% {performance.summary.worstPerformancePerAnno?.[0]?.year || "N/A"})</li>
                                                 </ul>
                                             </td>
                                             <td className="px-4 py-2"></td>
@@ -364,6 +444,12 @@ export default function PortfolioTable() {
                     bestPerformancePerAnno={performance.summary.bestPerformancePerAnno}
                     worstPerformancePerAnno={performance.summary.worstPerformancePerAnno}
                     onClose={() => setShowProjection(false)}
+                />
+            )}
+            {editingSavingsPlan && (
+                <EditSavingsPlanModal
+                    {...editingSavingsPlan}
+                    onClose={() => setEditingSavingsPlan(null)}
                 />
             )}
         </div>

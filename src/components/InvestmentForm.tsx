@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 
 import { usePortfolioSelector } from "../hooks/usePortfolio";
 import { generatePeriodicInvestments } from "../utils/calculations/assetValue";
@@ -81,9 +82,16 @@ const InvestmentForm = ({ assetId, clearSelectedAsset }: { assetId: string, clea
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
+
+        console.log("submitting")
+        console.time('generatePeriodicInvestments');
+        console.timeLog('generatePeriodicInvestments', "1");
+
         setIsSubmitting(true);
 
         setTimeout(async () => {
+            console.log("timeout")
             try {
                 if (type === "single") {
                     const investment = {
@@ -94,6 +102,7 @@ const InvestmentForm = ({ assetId, clearSelectedAsset }: { assetId: string, clea
                         date
                     };
                     addInvestment(assetId, investment);
+                    toast.success('Investment added successfully');
                 } else {
                     const periodicSettings = {
                         startDate: date,
@@ -108,18 +117,23 @@ const InvestmentForm = ({ assetId, clearSelectedAsset }: { assetId: string, clea
                             },
                         } : undefined),
                     };
+                    console.timeLog('generatePeriodicInvestments', "2");
 
                     const investments = generatePeriodicInvestments(
                         periodicSettings,
                         dateRange.endDate,
                         assetId
                     );
+                    console.timeLog('generatePeriodicInvestments', "3");
+                    addInvestment(assetId, investments);
 
-                    for (const investment of investments) {
-                        addInvestment(assetId, investment);
-                    }
+                    toast.success('Periodic investment plan created successfully');
                 }
+            } catch (error:any) {
+                toast.error('Failed to add investment. Please try again.' + String(error?.message || error));
             } finally {
+                console.timeLog('generatePeriodicInvestments', "4");
+                console.timeEnd('generatePeriodicInvestments');
                 setIsSubmitting(false);
                 setAmount('');
                 clearSelectedAsset();

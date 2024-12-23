@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 import { usePortfolioSelector } from "../../hooks/usePortfolio";
 import { Investment } from "../../types";
@@ -18,11 +19,16 @@ export const EditInvestmentModal = ({ investment, assetId, onClose }: EditInvest
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        updateInvestment(assetId, investment.id, {
-            ...investment,
-            amount: parseFloat(amount),
-        });
-        onClose();
+        try {
+            updateInvestment(assetId, investment.id, {
+                ...investment,
+                amount: parseFloat(amount),
+            });
+            toast.success('Investment updated successfully');
+            onClose();
+        } catch (error:any) {
+            toast.error('Failed to update investment' + String(error?.message || error));
+        }
     };
 
     return (

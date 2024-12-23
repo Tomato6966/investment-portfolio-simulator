@@ -16,7 +16,7 @@ type PortfolioAction =
     | { type: 'ADD_ASSET'; payload: Asset }
     | { type: 'REMOVE_ASSET'; payload: string }
     | { type: 'CLEAR_ASSETS' }
-    | { type: 'ADD_INVESTMENT'; payload: { assetId: string; investment: Investment } }
+    | { type: 'ADD_INVESTMENT'; payload: { assetId: string; investment: Investment | Investment[] } }
     | { type: 'REMOVE_INVESTMENT'; payload: { assetId: string; investmentId: string } }
     | { type: 'UPDATE_DATE_RANGE'; payload: DateRange }
     | { type: 'UPDATE_ASSET_HISTORICAL_DATA'; payload: { assetId: string; historicalData: HistoricalData[]; longName?: string } }
@@ -57,7 +57,7 @@ const portfolioReducer = (state: PortfolioState, action: PortfolioAction): Portf
                 ...state,
                 assets: state.assets.map(asset =>
                     asset.id === action.payload.assetId
-                        ? { ...asset, investments: [...asset.investments, action.payload.investment] }
+                        ? { ...asset, investments: [...asset.investments, ...(Array.isArray(action.payload.investment) ? action.payload.investment : [action.payload.investment])] }
                         : asset
                 )
             };
@@ -127,7 +127,7 @@ export interface PortfolioContextType extends PortfolioState {
     addAsset: (asset: Asset) => void;
     removeAsset: (assetId: string) => void;
     clearAssets: () => void;
-    addInvestment: (assetId: string, investment: Investment) => void;
+    addInvestment: (assetId: string, investment: Investment | Investment[]) => void;
     removeInvestment: (assetId: string, investmentId: string) => void;
     updateDateRange: (dateRange: DateRange) => void;
     updateAssetHistoricalData: (assetId: string, historicalData: HistoricalData[], longName?: string) => void;
@@ -148,7 +148,7 @@ export const PortfolioProvider = ({ children }: { children: React.ReactNode }) =
         addAsset: (asset: Asset) => dispatch({ type: 'ADD_ASSET', payload: asset }),
         removeAsset: (assetId: string) => dispatch({ type: 'REMOVE_ASSET', payload: assetId }),
         clearAssets: () => dispatch({ type: 'CLEAR_ASSETS' }),
-        addInvestment: (assetId: string, investment: Investment) =>
+        addInvestment: (assetId: string, investment: Investment | Investment[]) =>
             dispatch({ type: 'ADD_INVESTMENT', payload: { assetId, investment } }),
         removeInvestment: (assetId: string, investmentId: string) =>
             dispatch({ type: 'REMOVE_INVESTMENT', payload: { assetId, investmentId } }),

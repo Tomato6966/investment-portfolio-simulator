@@ -1,7 +1,7 @@
 {
   "name": "investment-portfolio-tracker",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +16,7 @@
     "lucide-react": "^0.469.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.4.1",
     "react-router-dom": "^7.1.0",
     "recharts": "^2.15.0",
     "use-debounce": "^10.0.4"

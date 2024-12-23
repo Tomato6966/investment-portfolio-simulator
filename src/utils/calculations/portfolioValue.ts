@@ -21,8 +21,12 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
             percentageChange: 0,
             assets: {},
         };
-        // this should contain the percentage gain of all investments till now
-        const pPercents: number[] = [];
+
+        interface WeightedPercent {
+            percent: number;
+            weight: number;
+        }
+        const weightedPercents: WeightedPercent[] = [];
 
         for (const asset of assets) {
             // calculate the invested kapital
@@ -49,14 +53,20 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
                 dayData.assets[asset.id] = currentValueOfAsset;
 
                 const percent = ((currentValueOfAsset - avgBuyIn) / avgBuyIn) * 100;
-                if (!Number.isNaN(percent)) pPercents.push(percent);
+                if (!Number.isNaN(percent) && investedValue && investedValue > 0) {
+                    weightedPercents.push({
+                        percent,
+                        weight: investedValue
+                    });
+                }
             }
         }
 
-
-        // Calculate average percentage change if percentages array is not empty
-        if (pPercents.length > 0) {
-            dayData.percentageChange = pPercents.reduce((a, b) => a + b, 0) / pPercents.length;
+        // Calculate weighted average percentage change
+        if (weightedPercents.length > 0) {
+            const totalWeight = weightedPercents.reduce((sum, wp) => sum + wp.weight, 0);
+            dayData.percentageChange = weightedPercents.reduce((sum, wp) =>
+                sum + (wp.percent * (wp.weight / totalWeight)), 0);
         } else {
             dayData.percentageChange = 0;
         }

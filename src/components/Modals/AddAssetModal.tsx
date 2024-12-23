@@ -1,5 +1,6 @@
 import { Loader2, Search, X } from "lucide-react";
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { useDebouncedCallback } from "use-debounce";
 
 import { usePortfolioSelector } from "../../hooks/usePortfolio";
@@ -43,17 +44,23 @@ export default function AddAssetModal({ onClose }: { onClose: () => void }) {
                     dateRange.endDate
                 );
 
+                if (historicalData.length === 0) {
+                    toast.error(`No historical data available for ${asset.name}`);
+                    return;
+                }
+
                 const assetWithHistory = {
                     ...asset,
-                    // override name with the fetched long Name if available
                     name: longName || asset.name,
                     historicalData,
                 };
 
                 addAsset(assetWithHistory);
+                toast.success(`Successfully added ${assetWithHistory.name}`);
                 onClose();
             } catch (error) {
                 console.error('Error fetching historical data:', error);
+                toast.error(`Failed to add ${asset.name}. Please try again.`);
             } finally {
                 setLoading(null);
             }

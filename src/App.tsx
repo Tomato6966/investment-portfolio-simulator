@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from "react";
+import { Toaster } from "react-hot-toast";
 
 import { AppShell } from "./components/Landing/AppShell";
 import { LoadingPlaceholder } from "./components/utils/LoadingPlaceholder";
@@ -19,6 +20,7 @@ export default function App() {
                     />
                 </Suspense>
             </AppShell>
+            <Toaster position="bottom-right" />
         </PortfolioProvider>
     );
 }

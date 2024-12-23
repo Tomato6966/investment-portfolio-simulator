@@ -1,4 +1,5 @@
 import type { Asset, YahooSearchResponse, YahooChartResult } from "../types";
+import toast from "react-hot-toast";
 
 // this is only needed when hosted staticly without a proxy server or smt
 // TODO change it to use the proxy server
@@ -49,6 +50,7 @@ export const searchAssets = async (query: string): Promise<Asset[]> => {
             }));
     } catch (error) {
         console.error('Error searching assets:', error);
+        toast.error('Failed to search assets. Please try again later.');
         return [];
     }
 };
@@ -81,6 +83,7 @@ export const getHistoricalData = async (symbol: string, startDate: string, endDa
         }
     } catch (error) {
         console.error('Error fetching historical data:', error);
+        toast.error(`Failed to fetch historical data for ${symbol}. Please try again later.`);
         return { historicalData: [], longName: '' };
     }
 };
