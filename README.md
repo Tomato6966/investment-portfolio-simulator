@@ -14,6 +14,7 @@ Why this Project?
 
 https://github.com/user-attachments/assets/78b027fa-9883-4813-8086-8b6aa19767de
 
+
 ## Features
 
 - 📈 Real-time stock data from Yahoo Finance
@@ -21,18 +22,32 @@ https://github.com/user-attachments/assets/78b027fa-9883-4813-8086-8b6aa19767de
 - 📊 Interactive charts with performance visualization
 - 🌓 Dark/Light mode support
 - 📱 Responsive design
+    - *Mobile friendly*
 - 📅 Historical data analysis
+    - *The portfolio is fully based on real-historical data, with configurable timeranges*
 - 💹 TTWOR (Time Travel Without Risk) calculations
+    - *Including metrics for TTWOR*
 - 🔄 Support for one-time and periodic investments
+    - *You can config your dream-portfolio by one time and periodic investments easily*
 - 📊 Detailed performance metrics
+    - *See all needed performance metrics in one place*
 - 📅 Future Projection with Withdrawal Analysis and Sustainability Analysis
+    - *Generate a future projection based on the current portfolio performance, with a withdrawal analysis and sustainability analysis + calculator*
+    - *Including with best, worst and average case scenarios*
+- 📊 Savings Plan Performance Overview Tables
+    - *See the performance of your savings plans if you have multiple assets to compare them*
+- 📄 Export to PDF
+    - *Export the entire portfolio Overview to a PDF, including Future Projections of 10, 15, 20, 30 and 40 years*
+- 📄 Export to CSV Tables
+    - *Export all available tables to CSV*
+
 
 ## Tech Stack
 
-- React 18
+- React 19
 - TypeScript
 - Tailwind CSS
-- Vite
+- Vite@6
 - Recharts
 - date-fns
 - Lucide Icons
@@ -41,8 +56,7 @@ https://github.com/user-attachments/assets/78b027fa-9883-4813-8086-8b6aa19767de
 
 ### Prerequisites
 
-- Node.js 20 or higher
-- npm or yarn
+- Node.js & npm 20 or higher
 
 ### Local Development
 
@@ -55,6 +69,10 @@ https://github.com/user-attachments/assets/78b027fa-9883-4813-8086-8b6aa19767de
 ![Dark Mode Preview](./docs/dark-mode.png)
 ![Light Mode Preview](./docs/light-mode.png)
 ![Future Projection Modal](./docs/future-projection.png)
+![PDF Export - Page-1](./docs/analysis-page-1.png)
+![PDF Export - Page-2](./docs/analysis-page-2.png)
+![Scenario Projection](./docs/scenario-projection.png)
+
 
 ### Credits:
 

@@ -1,15 +1,15 @@
 import { Loader2 } from "lucide-react";
 import React, { useState } from "react";
 
-import { usePortfolioStore } from "../store/portfolioStore";
+import { usePortfolioSelector } from "../hooks/usePortfolio";
 import { generatePeriodicInvestments } from "../utils/calculations/assetValue";
 
-export const InvestmentFormWrapper = () => {
-    const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
-    const { assets, clearAssets } = usePortfolioStore((state) => ({
+export default function InvestmentFormWrapper() {
+    const { assets, clearAssets } = usePortfolioSelector((state) => ({
         assets: state.assets,
         clearAssets: state.clearAssets,
     }));
+    const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
 
     const handleClearAssets = () => {
         if (window.confirm('Are you sure you want to delete all assets? This action cannot be undone.')) {
@@ -74,7 +74,7 @@ const InvestmentForm = ({ assetId, clearSelectedAsset }: { assetId: string, clea
     const [yearInterval, setYearInterval] = useState('1');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const { dateRange, addInvestment } = usePortfolioStore((state) => ({
+    const { dateRange, addInvestment } = usePortfolioSelector((state) => ({
         dateRange: state.dateRange,
         addInvestment: state.addInvestment,
     }));
@@ -83,46 +83,48 @@ const InvestmentForm = ({ assetId, clearSelectedAsset }: { assetId: string, clea
         e.preventDefault();
         setIsSubmitting(true);
 
-        try {
-            if (type === "single") {
-                const investment = {
-                    id: crypto.randomUUID(),
-                    assetId,
-                    type,
-                    amount: parseFloat(amount),
-                    date
-                };
-                addInvestment(assetId, investment);
-            } else {
-                const periodicSettings = {
-                    startDate: date,
-                    dayOfMonth: parseInt(dayOfMonth),
-                    interval: parseInt(interval),
-                    amount: parseFloat(amount),
-                    ...(isDynamic ? {
-                        dynamic: {
-                            type: dynamicType,
-                            value: parseFloat(dynamicValue),
-                            yearInterval: parseInt(yearInterval),
-                        },
-                    } : undefined),
-                };
-
-                const investments = generatePeriodicInvestments(
-                    periodicSettings,
-                    dateRange.endDate,
-                    assetId
-                );
-
-                for (const investment of investments) {
+        setTimeout(async () => {
+            try {
+                if (type === "single") {
+                    const investment = {
+                        id: crypto.randomUUID(),
+                        assetId,
+                        type,
+                        amount: parseFloat(amount),
+                        date
+                    };
                     addInvestment(assetId, investment);
+                } else {
+                    const periodicSettings = {
+                        startDate: date,
+                        dayOfMonth: parseInt(dayOfMonth),
+                        interval: parseInt(interval),
+                        amount: parseFloat(amount),
+                        ...(isDynamic ? {
+                            dynamic: {
+                                type: dynamicType,
+                                value: parseFloat(dynamicValue),
+                                yearInterval: parseInt(yearInterval),
+                            },
+                        } : undefined),
+                    };
+
+                    const investments = generatePeriodicInvestments(
+                        periodicSettings,
+                        dateRange.endDate,
+                        assetId
+                    );
+
+                    for (const investment of investments) {
+                        addInvestment(assetId, investment);
+                    }
                 }
+            } finally {
+                setIsSubmitting(false);
+                setAmount('');
+                clearSelectedAsset();
             }
-        } finally {
-            setIsSubmitting(false);
-            setAmount('');
-            clearSelectedAsset();
-        }
+        }, 10);
     };
 
     return (
@@ -264,7 +266,7 @@ const InvestmentForm = ({ assetId, clearSelectedAsset }: { assetId: string, clea
             <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {isSubmitting ? (
                     <Loader2 className="animate-spin mx-auto" size={16} />

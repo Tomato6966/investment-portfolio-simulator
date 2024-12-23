@@ -4,54 +4,41 @@ import {
 	Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis
 } from "recharts";
 
-import { usePortfolioStore } from "../store/portfolioStore";
-import { calculateFutureProjection } from "../utils/calculations/futureProjection";
-import { formatCurrency } from "../utils/formatters";
+import { usePortfolioSelector } from "../../hooks/usePortfolio";
+import { calculateFutureProjection } from "../../utils/calculations/futureProjection";
+import { formatCurrency } from "../../utils/formatters";
+
+import type { ProjectionData, SustainabilityAnalysis, WithdrawalPlan } from "../../types";
 
 interface FutureProjectionModalProps {
-    onClose: () => void;
     performancePerAnno: number;
+    bestPerformancePerAnno: { percentage: number, year: number }[];
+    worstPerformancePerAnno: { percentage: number, year: number }[];
+    onClose: () => void;
 }
 
-type ChartType = 'line' | 'bar';
+export type ChartType = 'line' | 'bar';
 
-export interface WithdrawalPlan {
-    amount: number;
-    interval: 'monthly' | 'yearly';
-    startTrigger: 'date' | 'portfolioValue' | 'auto';
-    startDate?: string;
-    startPortfolioValue?: number;
-    enabled: boolean;
-    autoStrategy?: {
-        type: 'maintain' | 'deplete' | 'grow';
-        targetYears?: number;
-        targetGrowth?: number;
-    };
-}
+type ScenarioCalc = { projection: ProjectionData[], sustainability: SustainabilityAnalysis | null, avaragedAmount: number, percentage: number, percentageAveraged: number };
 
-export interface ProjectionData {
-    date: string;
-    value: number;
-    invested: number;
-    withdrawals: number;
-    totalWithdrawn: number;
-}
-
-export interface SustainabilityAnalysis {
-    yearsToReachTarget: number;
-    targetValue: number;
-    sustainableYears: number | 'infinite';
-}
-
-export const FutureProjectionModal = ({ onClose, performancePerAnno }: FutureProjectionModalProps) => {
+export const FutureProjectionModal = ({
+    performancePerAnno,
+    bestPerformancePerAnno,
+    worstPerformancePerAnno,
+    onClose
+}: FutureProjectionModalProps) => {
     const [years, setYears] = useState('10');
     const [isCalculating, setIsCalculating] = useState(false);
     const [chartType, setChartType] = useState<ChartType>('line');
     const [projectionData, setProjectionData] = useState<ProjectionData[]>([]);
+    const [scenarios, setScenarios] = useState<{ best: ScenarioCalc, worst: ScenarioCalc }>({
+        best: { projection: [], sustainability: null, avaragedAmount: 0, percentage: 0, percentageAveraged: 0 },
+        worst: { projection: [], sustainability: null, avaragedAmount: 0, percentage: 0, percentageAveraged: 0 },
+    });
     const [withdrawalPlan, setWithdrawalPlan] = useState<WithdrawalPlan>({
         amount: 0,
         interval: 'monthly',
-        startTrigger: 'date',
+        startTrigger: 'auto',
         startDate: new Date().toISOString().split('T')[0],
         startPortfolioValue: 0,
         enabled: false,
@@ -63,7 +50,9 @@ export const FutureProjectionModal = ({ onClose, performancePerAnno }: FuturePro
     });
     const [sustainabilityAnalysis, setSustainabilityAnalysis] = useState<SustainabilityAnalysis | null>(null);
 
-    const { assets } = usePortfolioStore();
+    const { assets } = usePortfolioSelector((state) => ({
+        assets: state.assets,
+    }));
 
     const calculateProjection = useCallback(async () => {
         setIsCalculating(true);
@@ -76,14 +65,44 @@ export const FutureProjectionModal = ({ onClose, performancePerAnno }: FuturePro
             );
             setProjectionData(projection);
             setSustainabilityAnalysis(sustainability);
+            const slicedBestCase = bestPerformancePerAnno.slice(0, Math.floor(bestPerformancePerAnno.length / 2));
+            const slicedWorstCase = worstPerformancePerAnno.slice(0, Math.floor(worstPerformancePerAnno.length / 2));
+            const bestCase = slicedBestCase.reduce((acc, curr) => acc + curr.percentage, 0) / slicedBestCase.length || 0;
+            const worstCase = slicedWorstCase.reduce((acc, curr) => acc + curr.percentage, 0) / slicedWorstCase.length || 0;
+
+            const bestCaseAvaraged = (bestCase + performancePerAnno) / 2;
+            const worstCaseAvaraged = (worstCase + performancePerAnno) / 2;
+            setScenarios({
+                best: {
+                    ...await calculateFutureProjection(
+                        assets,
+                        parseInt(years),
+                        bestCaseAvaraged,
+                        withdrawalPlan.enabled ? withdrawalPlan : undefined
+                    ),
+                    avaragedAmount: slicedBestCase.length,
+                    percentageAveraged: bestCaseAvaraged,
+                    percentage: bestCase
+                },
+                worst: {
+                    ...await calculateFutureProjection(
+                        assets,
+                        parseInt(years),
+                        worstCaseAvaraged,
+                        withdrawalPlan.enabled ? withdrawalPlan : undefined
+                    ),
+                    avaragedAmount: slicedWorstCase.length,
+                    percentage: worstCase,
+                    percentageAveraged: worstCaseAvaraged
+                }
+            });
         } catch (error) {
             console.error('Error calculating projection:', error);
         } finally {
             setIsCalculating(false);
         }
-    }, [assets, years, withdrawalPlan, performancePerAnno]);
+    }, [assets, years, withdrawalPlan, performancePerAnno, bestPerformancePerAnno, worstPerformancePerAnno]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             const value = payload[0].value;
@@ -121,6 +140,36 @@ export const FutureProjectionModal = ({ onClose, performancePerAnno }: FuturePro
         }
         return null;
     };
+
+
+    const CustomScenarioTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            const bestCase = payload.find((p: any) => p.dataKey === 'bestCase')?.value || 0;
+            const baseCase = payload.find((p: any) => p.dataKey === 'baseCase')?.value || 0;
+            const worstCase = payload.find((p: any) => p.dataKey === 'worstCase')?.value || 0;
+            const invested = payload.find((p: any) => p.dataKey === 'invested')?.value || 0;
+
+            return (
+                <div className="bg-white dark:bg-slate-800 p-4 border rounded shadow-lg">
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                        {new Date(label).toLocaleDateString('de-DE')}
+                    </p>
+                    <p className="font-bold text-green-600 dark:text-green-400">
+                        Best-Case: {formatCurrency(bestCase)} {((bestCase - invested) / invested * 100).toFixed(2)}%
+                    </p>
+                    <p className="font-bold text-indigo-600 dark:text-indigo-400">
+                        Avg. Base-Case: {formatCurrency(baseCase)} {((baseCase - invested) / invested * 100).toFixed(2)}%
+                    </p>
+                    <p className="font-bold text-red-600 dark:text-red-400">
+                        Worst-Case: {formatCurrency(worstCase)} {((worstCase - invested) / invested * 100).toFixed(2)}%
+                    </p>
+                </div>
+            );
+        }
+        return null;
+    };
+
+
 
     const renderChart = () => {
         if (isCalculating) {
@@ -230,6 +279,97 @@ export const FutureProjectionModal = ({ onClose, performancePerAnno }: FuturePro
         );
     };
 
+    const renderScenarioDescription = () => {
+        if (!scenarios.best.projection.length) return null;
+
+        return (
+            <div className="mb-4 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg text-sm">
+                <h4 className="font-semibold mb-2 dark:text-gray-200">Scenario Calculations</h4>
+                <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+                    <li>
+                        <span className="font-medium text-indigo-600 dark:text-indigo-400">Avg. Base Case:</span> Using historical average return of <span className="font-bold underline">{performancePerAnno.toFixed(2)}%</span>
+                    </li>
+                    <li>
+                        <span className="font-medium text-green-600 dark:text-green-400">Best Case:</span> Average of top 50% performing years ({scenarios.best.avaragedAmount} years) at {scenarios.best.percentage.toFixed(2)}%,
+                        averaged with base case to <span className="font-semibold underline">{scenarios.best.percentageAveraged.toFixed(2)}%</span>
+                    </li>
+                    <li>
+                        <span className="font-medium text-red-600 dark:text-red-400">Worst Case:</span> Average of bottom 50% performing years ({scenarios.worst.avaragedAmount} years) at {scenarios.worst.percentage.toFixed(2)}%,
+                        averaged with base case to <span className="font-semibold underline">{scenarios.worst.percentageAveraged.toFixed(2)}%</span>
+                    </li>
+                </ul>
+            </div>
+        );
+    };
+
+    const renderScenarioChart = () => {
+        if (!scenarios.best.projection.length) return null;
+
+        // Create a merged and sorted dataset for consistent x-axis
+        const mergedData = projectionData.map(basePoint => {
+            const date = basePoint.date;
+            const bestPoint = scenarios.best.projection.find(p => p.date === date);
+            const worstPoint = scenarios.worst.projection.find(p => p.date === date);
+
+            return {
+                date,
+                bestCase: bestPoint?.value || 0,
+                baseCase: basePoint.value,
+                worstCase: worstPoint?.value || 0,
+                invested: basePoint.invested
+            };
+        }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        return (
+            <div className="mt-6">
+                <h4 className="font-semibold mb-4 dark:text-gray-200">Scenario Comparison</h4>
+                <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={mergedData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                                dataKey="date"
+                                tickFormatter={(date) => new Date(date).toLocaleDateString('de-DE', {
+                                    year: 'numeric',
+                                    month: 'numeric'
+                                })}
+                            />
+                            <YAxis />
+                            <Tooltip content={<CustomScenarioTooltip />}/>
+                            <Line
+                                type="monotone"
+                                dataKey="bestCase"
+                                stroke="#22c55e"
+                                name="Best Case"
+                                strokeWidth={2}
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="baseCase"
+                                stroke="#4f46e5"
+                                name="Base Case"
+                                strokeWidth={2}
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="worstCase"
+                                stroke="#ef4444"
+                                name="Worst Case"
+                                strokeWidth={2}
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="invested"
+                                stroke="#9333ea"
+                                name="Invested Amount"
+                            />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 lg:p-4">
             <div className="bg-white dark:bg-slate-800 rounded-none lg:rounded-lg w-full lg:w-[80vw] max-w-4xl h-screen lg:h-[75dvh] flex flex-col">
@@ -263,7 +403,7 @@ export const FutureProjectionModal = ({ onClose, performancePerAnno }: FuturePro
                                 <button
                                     onClick={calculateProjection}
                                     disabled={isCalculating}
-                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isCalculating ? (
                                         <Loader2 className="animate-spin" size={16} />
@@ -293,15 +433,16 @@ export const FutureProjectionModal = ({ onClose, performancePerAnno }: FuturePro
                                     Future projections are calculated with your portfolio's average annual return rate of{' '}
                                     <span className="font-semibold underline">{performancePerAnno.toFixed(2)}%</span>.
                                 </p>
-                                <p className="mt-1">
+                                <div className="mt-1">
                                     Strategy explanations:
                                     <ul className="list-disc ml-5 mt-1">
                                         <li><span className="font-semibold">Maintain:</span> Portfolio value stays constant, withdrawing only the returns</li>
                                         <li><span className="font-semibold">Deplete:</span> Portfolio depletes to zero over specified years</li>
                                         <li><span className="font-semibold">Grow:</span> Portfolio continues to grow at target rate while withdrawing</li>
                                     </ul>
-                                </p>
+                                </div>
                             </div>
+                            {renderScenarioDescription()}
                         </div>
 
                         <div>
@@ -370,7 +511,7 @@ export const FutureProjectionModal = ({ onClose, performancePerAnno }: FuturePro
                                     >
                                         <option value="date">Specific Date</option>
                                         <option value="portfolioValue">Portfolio Value Threshold</option>
-                                        <option value="auto">Auto</option>
+                                        <option value="auto" >Auto-Finder</option>
                                     </select>
                                 </div>
 
@@ -547,6 +688,7 @@ export const FutureProjectionModal = ({ onClose, performancePerAnno }: FuturePro
                         <div className="h-[500px]">
                             {renderChart()}
                         </div>
+                        {renderScenarioChart()}
                     </div>
                 </div>
             </div>

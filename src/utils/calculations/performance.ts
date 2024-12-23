@@ -1,28 +1,7 @@
 import { differenceInDays, isAfter, isBefore } from "date-fns";
 
-import { Asset } from "../../types";
+import type { Asset, InvestmentPerformance, PortfolioPerformance } from "../../types";
 
-export interface InvestmentPerformance {
-    id: string;
-    assetName: string;
-    date: string;
-    investedAmount: number;
-    investedAtPrice: number;
-    currentValue: number;
-    performancePercentage: number;
-}
-
-export interface PortfolioPerformance {
-    investments: InvestmentPerformance[];
-    summary: {
-        totalInvested: number;
-        currentValue: number;
-        performancePercentage: number;
-        performancePerAnnoPerformance: number;
-        ttworValue: number;
-        ttworPercentage: number;
-    };
-}
 
 export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerformance => {
     const investments: InvestmentPerformance[] = [];
@@ -36,7 +15,7 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
     const investedPerAsset: Record<string, number> = {};
 
     // Sammle erste und letzte Preise für jedes Asset
-    for(const asset of assets) {
+    for (const asset of assets) {
         firstDayPrices[asset.id] = asset.historicalData[0]?.price || 0;
         currentPrices[asset.id] = asset.historicalData[asset.historicalData.length - 1]?.price || 0;
         investedPerAsset[asset.id] = asset.investments.reduce((sum, inv) => sum + inv.amount, 0);
@@ -52,8 +31,8 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
     }, 0);
 
     // Finde das früheste Investmentdatum
-    for(const asset of assets) {
-        for(const investment of asset.investments) {
+    for (const asset of assets) {
+        for (const investment of asset.investments) {
             const investmentDate = new Date(investment.date!);
             if (!earliestDate || isBefore(investmentDate, earliestDate)) {
                 earliestDate = investmentDate;
@@ -61,11 +40,90 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
         }
     }
 
+    // Calculate portfolio-level annual performances
+    const annualPerformances: { year: number; percentage: number }[] = [];
+
+    // Calculate portfolio performance for each year
+    const now = new Date();
+    const startYear = earliestDate ? earliestDate.getFullYear() : now.getFullYear();
+    const endYear = now.getFullYear();
+
+    for (let year = startYear; year <= endYear; year++) {
+        const yearStart = new Date(year, 0, 1); // 1. Januar
+        const yearEnd = year === endYear ? new Date(year, now.getMonth(), now.getDate()) : new Date(year, 11, 31); // Aktuelles Datum oder 31. Dez.
+
+        const investmentsPerformances:number[] = [];
+
+        for (const asset of assets) {
+            // Get prices for the start and end of the year
+            const startPrice = asset.historicalData.filter(d =>
+                new Date(d.date).getFullYear() === year &&
+                new Date(d.date).getMonth() === 0
+            ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).find(d => d.price !== 0)?.price || 0;
+
+            const endPrice = asset.historicalData.filter(d =>
+                new Date(d.date).getFullYear() === year
+            ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).find(d => d.price !== 0)?.price || 0;
+
+            if (startPrice === 0 || endPrice === 0) {
+                console.warn(`Skipping asset for year ${year} due to missing start or end price`);
+                continue; // Überspringe, wenn keine Daten vorhanden
+            }
+
+            // Get all investments made before or during this year
+            const relevantInvestments = asset.investments.filter(inv =>
+                new Date(inv.date!) <= yearEnd && new Date(inv.date!) >= yearStart
+            );
+
+            for (const investment of relevantInvestments) {
+                const investmentPrice = asset.historicalData.find(
+                    (data) => data.date === investment.date
+                )?.price || 0;
+
+                const previousPrice = investmentPrice || asset.historicalData.filter(
+                    (data) => isBefore(new Date(data.date), new Date(investment.date!))
+                ).reverse().find((v) => v.price !== 0)?.price || 0;
+
+                const buyInPrice = investmentPrice || previousPrice || asset.historicalData.filter(
+                    (data) => isAfter(new Date(data.date), new Date(investment.date!))
+                ).find((v) => v.price !== 0)?.price || 0;
+
+
+                if (buyInPrice > 0) {
+                    const shares = investment.amount / buyInPrice; // Berechne Anzahl der Shares
+                    const endValue = shares * endPrice;
+                    const startValue = shares * startPrice;
+                    investmentsPerformances.push((endValue - startValue) / startValue * 100);
+                }
+            }
+        }
+
+        // Calculate performance for the year
+        if (investmentsPerformances.length > 0) {
+            const percentage = investmentsPerformances.reduce((acc, curr) => acc + curr, 0) / investmentsPerformances.length;
+
+            if (!isNaN(percentage)) {
+                annualPerformances.push({ year, percentage });
+            } else {
+                console.warn(`Invalid percentage calculated for year ${year}`);
+            }
+        } else {
+            console.warn(`Skipping year ${year} due to zero portfolio values`);
+        }
+    }
+
+    // Get best and worst years for the entire portfolio
+    const bestPerformancePerAnno = annualPerformances.length > 0
+        ? Array.from(annualPerformances).sort((a, b) => b.percentage - a.percentage)
+        : [];
+
+    const worstPerformancePerAnno = Array.from(bestPerformancePerAnno).reverse()
+
     // Normale Performance-Berechnungen...
-    for(const asset of assets) {
+    for (const asset of assets) {
         const currentPrice = asset.historicalData[asset.historicalData.length - 1]?.price || 0;
 
-        for(const investment of asset.investments) {
+        for (const investment of asset.investments) {
             const investmentPrice = asset.historicalData.find(
                 (data) => data.date === investment.date
             )?.price || 0;
@@ -87,6 +145,7 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
                 date: investment.date!,
                 investedAmount: investment.amount,
                 investedAtPrice: buyInPrice,
+                periodicGroupId: investment.periodicGroupId,
                 currentValue,
                 performancePercentage: investment.amount > 0
                     ? (((currentValue - investment.amount) / investment.amount)) * 100
@@ -128,6 +187,8 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
             performancePerAnnoPerformance,
             ttworValue,
             ttworPercentage,
+            worstPerformancePerAnno: worstPerformancePerAnno,
+            bestPerformancePerAnno: bestPerformancePerAnno
         },
     };
 };

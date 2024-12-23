@@ -6,49 +6,20 @@ import {
 } from "recharts";
 import { useDebouncedCallback } from "use-debounce";
 
-import { useDarkMode } from "../providers/DarkModeProvider";
+import { useDarkMode } from "../hooks/useDarkMode";
+import { usePortfolioSelector } from "../hooks/usePortfolio";
 import { getHistoricalData } from "../services/yahooFinanceService";
-import { usePortfolioStore } from "../store/portfolioStore";
 import { DateRange } from "../types";
 import { calculatePortfolioValue } from "../utils/calculations/portfolioValue";
-import { DateRangePicker } from "./DateRangePicker";
+import { getHexColor } from "../utils/formatters";
+import { DateRangePicker } from "./utils/DateRangePicker";
 
-const LIGHT_MODE_COLORS = [
-	'#2563eb', '#dc2626', '#059669', '#7c3aed', '#ea580c',
-	'#0891b2', '#be123c', '#1d4ed8', '#b91c1c', '#047857',
-	'#6d28d9', '#c2410c', '#0e7490', '#9f1239', '#1e40af',
-	'#991b1b', '#065f46', '#5b21b6', '#9a3412', '#155e75',
-	'#881337', '#1e3a8a', '#7f1d1d', '#064e3b', '#4c1d95'
-];
-
-const DARK_MODE_COLORS = [
-	'#60a5fa', '#f87171', '#34d399', '#a78bfa', '#fb923c',
-	'#22d3ee', '#fb7185', '#3b82f6', '#ef4444', '#10b981',
-	'#8b5cf6', '#f97316', '#06b6d4', '#f43f5e', '#2563eb',
-	'#dc2626', '#059669', '#7c3aed', '#ea580c', '#0891b2',
-	'#be123c', '#1d4ed8', '#b91c1c', '#047857', '#6d28d9'
-];
-
-const getHexColor = (usedColors: Set<string>, isDarkMode: boolean): string => {
-	const colorPool = isDarkMode ? DARK_MODE_COLORS : LIGHT_MODE_COLORS;
-
-	// Find first unused color
-	const availableColor = colorPool.find(color => !usedColors.has(color));
-
-	if (availableColor) {
-		return availableColor;
-	}
-
-	// Fallback to random color if all predefined colors are used
-	return `#${Math.floor(Math.random()*16777215).toString(16)}`;
-};
-
-export const PortfolioChart = () => {
+export default function PortfolioChart() {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [hideAssets, setHideAssets] = useState(false);
     const [hiddenAssets, setHiddenAssets] = useState<Set<string>>(new Set());
     const { isDarkMode } = useDarkMode();
-    const { assets, dateRange, updateDateRange, updateAssetHistoricalData } = usePortfolioStore((state) => ({
+    const { assets, dateRange, updateDateRange, updateAssetHistoricalData } = usePortfolioSelector((state) => ({
         assets: state.assets,
         dateRange: state.dateRange,
         updateDateRange: state.updateDateRange,
@@ -57,11 +28,13 @@ export const PortfolioChart = () => {
 
     const fetchHistoricalData = useCallback(
         async (startDate: string, endDate: string) => {
-            assets.forEach(async (asset) => {
-                const historicalData = await getHistoricalData(asset.symbol, startDate, endDate);
-                updateAssetHistoricalData(asset.id, historicalData);
-            });
-    }, [assets, updateAssetHistoricalData]);
+            for (const asset of assets) {
+                const { historicalData, longName } = await getHistoricalData(asset.symbol, startDate, endDate);
+                updateAssetHistoricalData(asset.id, historicalData, longName);
+            }
+        },
+        [assets, updateAssetHistoricalData]
+    );
 
     const debouncedFetchHistoricalData = useDebouncedCallback(fetchHistoricalData, 1500, {
         maxWait: 5000,
@@ -69,14 +42,14 @@ export const PortfolioChart = () => {
 
     const assetColors: Record<string, string> = useMemo(() => {
         const usedColors = new Set<string>();
-		return assets.reduce((colors, asset) => {
-			const color = getHexColor(usedColors, isDarkMode);
-			usedColors.add(color);
-			return {
-				...colors,
-				[asset.id]: color,
-			};
-		}, {});
+        return assets.reduce((colors, asset) => {
+            const color = getHexColor(usedColors, isDarkMode);
+            usedColors.add(color);
+            return {
+                ...colors,
+                [asset.id]: color,
+            };
+        }, {});
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [assets.map(a => a.id).join(','), isDarkMode]);
 
@@ -84,7 +57,7 @@ export const PortfolioChart = () => {
     const allAssetsInvestedKapitals = useMemo<Record<string, number>>(() => {
         const investedKapitals: Record<string, number> = {};
 
-        for(const asset of assets) {
+        for (const asset of assets) {
             investedKapitals[asset.id] = asset.investments.reduce((acc, curr) => acc + curr.amount, 0);
         }
 
@@ -101,7 +74,7 @@ export const PortfolioChart = () => {
         };
 
         processed["ttwor"] = 0;
-        for(const asset of assets) {
+        for (const asset of assets) {
             const initialPrice = data[0].assets[asset.id];
             const currentPrice = point.assets[asset.id];
             if (initialPrice && currentPrice) {
@@ -133,7 +106,7 @@ export const PortfolioChart = () => {
     const toggleAllAssets = useCallback(() => {
         setHideAssets(!hideAssets);
         setHiddenAssets(new Set());
-    }, [hideAssets] );
+    }, [hideAssets]);
 
     const CustomLegend = useCallback(({ payload }: any) => {
         return (
@@ -168,9 +141,8 @@ export const PortfolioChart = () => {
                             <button
                                 key={`asset-${index}`}
                                 onClick={() => toggleAsset(assetId)}
-                                className={`flex items-center gap-2 px-2 py-1 rounded transition-opacity duration-200 ${
-                                    isHidden ? 'opacity-40' : ''
-                                } hover:bg-gray-100 dark:hover:bg-gray-800`}
+                                className={`flex items-center gap-2 px-2 py-1 rounded transition-opacity duration-200 ${isHidden ? 'opacity-40' : ''
+                                    } hover:bg-gray-100 dark:hover:bg-gray-800`}
                             >
                                 <div className="flex items-center gap-2">
                                     <div
@@ -324,7 +296,8 @@ export const PortfolioChart = () => {
                 all other assets are scaled by their % gain/loss and thus scaled to the right YAxis.
             </i>
         </>
-    ), [assets, isDarkMode, assetColors, hideAssets, hiddenAssets, processedData, CustomLegend, dateRange, updateDateRange, isFullscreen]);
+    ), [assets, isDarkMode, assetColors, handleUpdateDateRange, hideAssets, hiddenAssets, processedData, CustomLegend, dateRange, isFullscreen]);
+
 
     if (isFullscreen) {
         return (

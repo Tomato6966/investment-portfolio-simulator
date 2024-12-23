@@ -1,66 +1,24 @@
-import { Heart, Moon, Plus, Sun } from "lucide-react";
-import React, { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 
-import { AddAssetModal } from "./components/AddAssetModal";
-import { InvestmentFormWrapper } from "./components/InvestmentForm";
-import { PortfolioChart } from "./components/PortfolioChart";
-import { PortfolioTable } from "./components/PortfolioTable";
-import { useDarkMode } from "./providers/DarkModeProvider";
+import { AppShell } from "./components/Landing/AppShell";
+import { LoadingPlaceholder } from "./components/utils/LoadingPlaceholder";
+import { PortfolioProvider } from "./providers/PortfolioProvider";
+
+const MainContent = lazy(() => import("./components/Landing/MainContent"));
 
 export default function App() {
     const [isAddingAsset, setIsAddingAsset] = useState(false);
-    const { isDarkMode, toggleDarkMode } = useDarkMode();
 
     return (
-        <div className={`app ${isDarkMode ? 'dark' : ''}`}>
-            <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-8 transition-colors relative">
-                <div className="max-w-7xl mx-auto">
-                    <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-2xl font-bold dark:text-white">Portfolio Simulator</h1>
-                    <div className="flex gap-4">
-                        <button
-                            onClick={toggleDarkMode}
-                            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                            aria-label="Toggle dark mode"
-                        >
-                            {isDarkMode ? (
-                                <Sun className="w-5 h-5 text-yellow-500" />
-                            ) : (
-                                <Moon className="w-5 h-5 text-gray-600" />
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setIsAddingAsset(true)}
-                            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Add Asset
-                        </button>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-8 dark:text-gray-300">
-                    <div className="col-span-3">
-                        <PortfolioChart />
-                    </div>
-                    <div className="col-span-3 lg:col-span-1">
-                        <InvestmentFormWrapper />
-                    </div>
-                </div>
-
-                <PortfolioTable />
-                {isAddingAsset && <AddAssetModal onClose={() => setIsAddingAsset(false)} />}
-                </div>
-
-                <a
-                    href="https://github.com/Tomato6966/investment-portfolio-simulator"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="fixed bottom-4 left-4 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1 transition-colors"
-                >
-                    Built with <Heart className="w-4 h-4 text-red-500 inline animate-pulse" /> by Tomato6966
-                </a>
-            </div>
-        </div>
+        <PortfolioProvider>
+            <AppShell onAddAsset={() => setIsAddingAsset(true)}>
+                <Suspense fallback={<LoadingPlaceholder className="h-screen" />}>
+                    <MainContent
+                        isAddingAsset={isAddingAsset}
+                        setIsAddingAsset={setIsAddingAsset}
+                    />
+                </Suspense>
+            </AppShell>
+        </PortfolioProvider>
     );
 }

@@ -1,16 +1,9 @@
 import { addDays, isAfter, isBefore } from "date-fns";
 
-import { Asset, DateRange } from "../../types";
 import { calculateAssetValueAtDate } from "./assetValue";
 
-type DayData = {
-    date: string;
-    total: number;
-    invested: number;
-    percentageChange: number;
-    /* Current price of asset */
-    assets: { [key: string]: number };
-};
+import type { Asset, DateRange, DayData } from "../../types";
+
 export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) => {
     const { startDate, endDate } = dateRange;
     const data: DayData[] = [];
@@ -31,9 +24,9 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
         // this should contain the percentage gain of all investments till now
         const pPercents: number[] = [];
 
-        for(const asset of assets) {
+        for (const asset of assets) {
             // calculate the invested kapital
-            for(const investment of asset.investments) {
+            for (const investment of asset.investments) {
                 if (!isAfter(new Date(investment.date!), currentDate)) {
                     dayData.invested += investment.amount;
                 }
@@ -56,7 +49,7 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
                 dayData.assets[asset.id] = currentValueOfAsset;
 
                 const percent = ((currentValueOfAsset - avgBuyIn) / avgBuyIn) * 100;
-                if(!Number.isNaN(percent)) pPercents.push(percent);
+                if (!Number.isNaN(percent)) pPercents.push(percent);
             }
         }
 

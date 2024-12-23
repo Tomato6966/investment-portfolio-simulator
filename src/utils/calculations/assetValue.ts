@@ -1,25 +1,13 @@
 import { isAfter, isBefore, isSameDay } from "date-fns";
 
-import { Asset, Investment } from "../../types";
-
-export interface PeriodicSettings {
-    startDate: string;
-    dayOfMonth: number;
-    interval: number;
-    amount: number;
-    dynamic?: {
-        type: 'percentage' | 'fixed';
-        value: number;
-        yearInterval: number;
-    };
-}
+import type { Asset, Investment, PeriodicSettings } from "../../types";
 
 export const calculateAssetValueAtDate = (asset: Asset, date: Date, currentPrice: number) => {
     let totalShares = 0;
 
-    const buyIns:number[] = [];
+    const buyIns: number[] = [];
     // Calculate shares for each investment up to the given date
-    for(const investment of asset.investments) {
+    for (const investment of asset.investments) {
         const invDate = new Date(investment.date!);
         if (isAfter(invDate, date) || isSameDay(invDate, date)) continue;
 
@@ -70,7 +58,8 @@ export const generatePeriodicInvestments = (settings: PeriodicSettings, endDate:
                 // Check if we've reached a year interval for increase
                 if (yearsSinceStart > 0 && yearsSinceStart % settings.dynamic.yearInterval === 0) {
                     if (settings.dynamic.type === 'percentage') {
-                        currentAmount *= (1 + settings.dynamic.value / 100);
+                        console.log('percentage', settings.dynamic.value, (1 + (settings.dynamic.value / 100)));
+                        currentAmount *= (1 + (settings.dynamic.value / 100));
                     } else {
                         currentAmount += settings.dynamic.value;
                     }

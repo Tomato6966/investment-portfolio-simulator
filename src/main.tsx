@@ -7,9 +7,9 @@ import App from "./App.tsx";
 import { DarkModeProvider } from "./providers/DarkModeProvider.tsx";
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <DarkModeProvider>
-      <App />
-    </DarkModeProvider>
-  </StrictMode>
+    <StrictMode>
+        <DarkModeProvider>
+            <App />
+        </DarkModeProvider>
+    </StrictMode>
 );
