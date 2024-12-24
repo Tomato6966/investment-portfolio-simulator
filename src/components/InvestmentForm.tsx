@@ -63,17 +63,25 @@ export default function InvestmentFormWrapper() {
     );
 }
 
+interface IntervalConfig {
+    value: number;
+    unit: 'days' | 'months' | 'years';
+}
+
 const InvestmentForm = ({ assetId }: { assetId: string }) => {
     const [type, setType] = useState<'single' | 'periodic'>('single');
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState('');
     const [dayOfMonth, setDayOfMonth] = useState('1');
-    const [interval, setInterval] = useState('30');
     const [isDynamic, setIsDynamic] = useState(false);
     const [dynamicType, setDynamicType] = useState<'percentage' | 'fixed'>('percentage');
     const [dynamicValue, setDynamicValue] = useState('');
     const [yearInterval, setYearInterval] = useState('1');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [intervalConfig, setIntervalConfig] = useState<IntervalConfig>({
+        value: 1,
+        unit: 'months'
+    });
 
     const { dateRange, addInvestment } = usePortfolioSelector((state) => ({
         dateRange: state.dateRange,
@@ -84,14 +92,9 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
         e.preventDefault();
         e.stopPropagation();
 
-        console.log("submitting")
-        console.time('generatePeriodicInvestments');
-        console.timeLog('generatePeriodicInvestments', "1");
-
         setIsSubmitting(true);
 
         setTimeout(() => {
-            console.log("timeout")
             try {
                 if (type === "single") {
                     const investment = {
@@ -99,16 +102,17 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
                         assetId,
                         type,
                         amount: parseFloat(amount),
-                        date
+                        date: new Date(date),
                     };
                     addInvestment(assetId, investment);
                     toast.success('Investment added successfully');
                 } else {
                     const periodicSettings = {
-                        startDate: date,
+                        startDate: new Date(date),
                         dayOfMonth: parseInt(dayOfMonth),
-                        interval: parseInt(interval),
+                        interval: intervalConfig.value,
                         amount: parseFloat(amount),
+                        intervalUnit: intervalConfig.unit,
                         ...(isDynamic ? {
                             dynamic: {
                                 type: dynamicType,
@@ -117,23 +121,19 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
                             },
                         } : undefined),
                     };
-                    console.timeLog('generatePeriodicInvestments', "2");
 
                     const investments = generatePeriodicInvestments(
                         periodicSettings,
-                        dateRange.endDate,
+                        new Date(dateRange.endDate),
                         assetId
                     );
-                    console.timeLog('generatePeriodicInvestments', "3");
                     addInvestment(assetId, investments);
 
-                    toast.success('Periodic investment plan created successfully');
+                    toast.success('Sparplan erfolgreich erstellt');
                 }
             } catch (error:any) {
-                toast.error('Failed to add investment. Please try again.' + String(error?.message || error));
+                toast.error('Fehler beim Erstellen des Investments: ' + String(error?.message || error));
             } finally {
-                console.timeLog('generatePeriodicInvestments', "4");
-                console.timeEnd('generatePeriodicInvestments');
                 setIsSubmitting(false);
                 setAmount('');
             }
@@ -193,27 +193,51 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
                             required
                         />
                     </div>
-                    <label className="block text-sm font-medium mb-1">SavingsPlan-Start Date</label>
-                    <input
-                        type="date"
-                        value={date}
-                        // the "dayOf the month should not be change able, due to the day of the"
-                        onChange={(e) => setDate(e.target.value)}
-                        className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300 [&::-webkit-calendar-picker-indicator]:dark:invert"
-                        required
-                    />
                     <div>
                         <label className="block text-sm font-medium mb-1">
-                            Interval (days)
+                            Interval
+                            <span className="ml-1 text-gray-400 hover:text-gray-600 cursor-help" title="Wählen Sie das Intervall für Ihre regelmäßigen Investitionen. Bei monatlichen Zahlungen am 1. eines Monats werden die Investments automatisch am 1. jeden Monats ausgeführt.">
+                                ⓘ
+                            </span>
                         </label>
+                        <div className="flex gap-2">
+                            <input
+                                type="number"
+                                value={intervalConfig.value}
+                                onChange={(e) => setIntervalConfig(prev => ({
+                                    ...prev,
+                                    value: parseInt(e.target.value)
+                                }))}
+                                className="w-24 p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300"
+                                min="1"
+                                required
+                            />
+                            <select
+                                value={intervalConfig.unit}
+                                onChange={(e) => setIntervalConfig(prev => ({
+                                    ...prev,
+                                    unit: e.target.value as IntervalConfig['unit']
+                                }))}
+                                className="flex-1 p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300"
+                            >
+                                <option value="days">Days</option>
+                                <option value="weeks">Weeks</option>
+                                <option value="months">Months</option>
+                                <option value="quarters">Quarters</option>
+                                <option value="years">Years</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium mb-1">SavingsPlan-Start Datum</label>
                         <input
-                            type="number"
-                            value={interval}
-                            onChange={(e) => setInterval(e.target.value)}
-                            className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300"
-                            min="14"
-                            max="365"
+                            type="date"
+                            value={date}
+                            onChange={(e) => setDate(e.target.value)}
+                            className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300 [&::-webkit-calendar-picker-indicator]:dark:invert"
                             required
+                            lang="de"
                         />
                     </div>
 

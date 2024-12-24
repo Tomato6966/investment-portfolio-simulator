@@ -55,10 +55,10 @@ export const searchAssets = async (query: string): Promise<Asset[]> => {
     }
 };
 
-export const getHistoricalData = async (symbol: string, startDate: string, endDate: string) => {
+export const getHistoricalData = async (symbol: string, startDate: Date, endDate: Date) => {
     try {
-        const start = Math.floor(new Date(startDate).getTime() / 1000);
-        const end = Math.floor(new Date(endDate).getTime() / 1000);
+        const start = Math.floor(startDate.getTime() / 1000);
+        const end = Math.floor(endDate.getTime() / 1000);
 
         const params = new URLSearchParams({
             period1: start.toString(),
@@ -76,7 +76,7 @@ export const getHistoricalData = async (symbol: string, startDate: string, endDa
 
         return {
             historicalData: timestamp.map((time: number, index: number) => ({
-                date: new Date(time * 1000).toISOString().split('T')[0],
+                date: new Date(time * 1000),
                 price: quotes.close[index],
             })),
             longName: meta.longName

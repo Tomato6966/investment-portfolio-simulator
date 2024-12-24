@@ -1,4 +1,4 @@
-import { addMonths, differenceInYears, format } from "date-fns";
+import { addMonths, differenceInYears } from "date-fns";
 
 import type {
     ProjectionData, SustainabilityAnalysis, WithdrawalPlan, Asset, Investment
@@ -10,7 +10,7 @@ const findOptimalStartingPoint = (
     desiredWithdrawal: number,
     strategy: WithdrawalPlan['autoStrategy'],
     interval: 'monthly' | 'yearly'
-): { startDate: string; requiredPortfolioValue: number } => {
+): { startDate: Date; requiredPortfolioValue: number } => {
     const monthlyWithdrawal = interval === 'yearly' ? desiredWithdrawal / 12 : desiredWithdrawal;
     let requiredPortfolioValue = 0;
 
@@ -42,7 +42,7 @@ const findOptimalStartingPoint = (
     startDate.setMonth(startDate.getMonth() + Math.max(0, monthsToReach));
 
     return {
-        startDate: startDate.toISOString().split('T')[0],
+        startDate,
         requiredPortfolioValue,
     };
 };
@@ -105,7 +105,7 @@ export const calculateFutureProjection = async (
 
             future.push({
                 ...lastInvestment,
-                date: format(currentDate, 'yyyy-MM-dd'),
+                date: currentDate,
                 amount: currentAmount,
             });
         }
@@ -208,7 +208,7 @@ export const calculateFutureProjection = async (
         // Only add to projection data if within display timeframe
         if (currentDate <= endDateForDisplay) {
             projectionData.push({
-                date: format(currentDate, 'yyyy-MM-dd'),
+                date: currentDate,
                 value: Math.max(0, portfolioValue),
                 invested: totalInvested,
                 withdrawals: monthlyWithdrawal,

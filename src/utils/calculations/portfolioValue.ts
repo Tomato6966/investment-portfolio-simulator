@@ -1,4 +1,4 @@
-import { addDays, isAfter, isBefore } from "date-fns";
+import { addDays, isAfter, isBefore, isSameDay } from "date-fns";
 
 import { calculateAssetValueAtDate } from "./assetValue";
 
@@ -8,14 +8,14 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
     const { startDate, endDate } = dateRange;
     const data: DayData[] = [];
 
-    let currentDate = new Date(startDate);
-    const end = new Date(endDate);
+    let currentDate = startDate;
+    const end = endDate;
 
     const beforeValue: { [assetId: string]: number } = {};
 
     while (isBefore(currentDate, end)) {
         const dayData: DayData = {
-            date: currentDate.toISOString().split('T')[0],
+            date: currentDate,
             total: 0,
             invested: 0,
             percentageChange: 0,
@@ -38,7 +38,7 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
 
             // Get historical price for the asset
             const currentValueOfAsset = asset.historicalData.find(
-                (data) => data.date === dayData.date
+                (data) => isSameDay(data.date, dayData.date)
             )?.price || beforeValue[asset.id];
             beforeValue[asset.id] = currentValueOfAsset;
 
@@ -52,13 +52,14 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
                 dayData.total += investedValue || 0;
                 dayData.assets[asset.id] = currentValueOfAsset;
 
-                const percent = ((currentValueOfAsset - avgBuyIn) / avgBuyIn) * 100;
-                if (!Number.isNaN(percent) && investedValue && investedValue > 0) {
-                    weightedPercents.push({
-                        percent,
-                        weight: investedValue
-                    });
-                }
+                const performancePercentage = investedValue > 0
+                    ? ((currentValueOfAsset - avgBuyIn) / avgBuyIn) * 100
+                    : 0;
+
+                weightedPercents.push({
+                    percent: performancePercentage,
+                    weight: investedValue
+                });
             }
         }
 
@@ -70,6 +71,14 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
         } else {
             dayData.percentageChange = 0;
         }
+
+        const totalInvested = dayData.invested; // Total invested amount for the day
+        const totalCurrentValue = dayData.total; // Total current value for the day
+
+        dayData.percentageChange = totalInvested > 0
+            ? ((totalCurrentValue - totalInvested) / totalInvested) * 100
+            : 0;
+
 
         currentDate = addDays(currentDate, 1);
         data.push(dayData);

@@ -1,4 +1,4 @@
-import { isAfter, isBefore } from "date-fns";
+import { isAfter, isBefore, isSameDay } from "date-fns";
 
 import type { Asset, InvestmentPerformance, PortfolioPerformance } from "../../types";
 
@@ -76,16 +76,18 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
             );
 
             for (const investment of relevantInvestments) {
+                const invDate = new Date(investment.date!);
+
                 const investmentPrice = asset.historicalData.find(
-                    (data) => data.date === investment.date
+                    (data) => isSameDay(data.date, invDate)
                 )?.price || 0;
 
                 const previousPrice = investmentPrice || asset.historicalData.filter(
-                    (data) => isBefore(new Date(data.date), new Date(investment.date!))
+                    (data) => isBefore(new Date(data.date), invDate)
                 ).reverse().find((v) => v.price !== 0)?.price || 0;
 
                 const buyInPrice = investmentPrice || previousPrice || asset.historicalData.filter(
-                    (data) => isAfter(new Date(data.date), new Date(investment.date!))
+                    (data) => isAfter(new Date(data.date), invDate)
                 ).find((v) => v.price !== 0)?.price || 0;
 
                 if (buyInPrice > 0) {
@@ -128,16 +130,17 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
         const currentPrice = asset.historicalData[asset.historicalData.length - 1]?.price || 0;
 
         for (const investment of asset.investments) {
+            const invDate = new Date(investment.date!);
             const investmentPrice = asset.historicalData.find(
-                (data) => data.date === investment.date
+                (data) => isSameDay(data.date, invDate)
             )?.price || 0;
 
             const previousPrice = investmentPrice || asset.historicalData.filter(
-                (data) => isBefore(new Date(data.date), new Date(investment.date!))
+                (data) => isBefore(new Date(data.date), invDate)
             ).reverse().find((v) => v.price !== 0)?.price || 0;
 
             const buyInPrice = investmentPrice || previousPrice || asset.historicalData.filter(
-                (data) => isAfter(new Date(data.date), new Date(investment.date!))
+                (data) => isAfter(new Date(data.date), invDate)
             ).find((v) => v.price !== 0)?.price || 0;
 
             const shares = buyInPrice > 0 ? investment.amount / buyInPrice : 0;
@@ -165,24 +168,9 @@ export const calculateInvestmentPerformance = (assets: Asset[]): PortfolioPerfor
         ? ((ttworValue - totalInvested) / totalInvested) * 100
         : 0;
 
-    // Berechne die jährliche Performance
-    // const performancePerAnnoPerformance = (() => {
-    //     if (!earliestDate || totalInvested === 0) return 0;
-
-    //     const years = differenceInDays(new Date(), earliestDate) / 365;
-    //     if (years < 0.01) return 0; // Verhindere Division durch sehr kleine Zahlen
-
-    //     // Formel: (1 + r)^n = FV/PV
-    //     // r = (FV/PV)^(1/n) - 1
-    //     const totalReturn = totalCurrentValue / totalInvested;
-    //     const annualizedReturn = Math.pow(totalReturn, 1 / years) - 1;
-
-    //     return annualizedReturn * 100;
-    // })();
 
     const performancePerAnnoPerformance = annualPerformances.reduce((acc, curr) => acc + curr.percentage, 0) / annualPerformances.length;
 
-    console.log(performancePerAnnoPerformance, annualPerformances);
     return {
         investments,
         summary: {

@@ -3,6 +3,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 
 import { usePortfolioSelector } from "../../hooks/usePortfolio";
+import { PeriodicSettings } from "../../types";
 import { generatePeriodicInvestments } from "../../utils/calculations/assetValue";
 
 interface EditSavingsPlanModalProps {
@@ -31,6 +32,7 @@ export const EditSavingsPlanModal = ({
     const [amount, setAmount] = useState(initialAmount.toString());
     const [dayOfMonth, setDayOfMonth] = useState(initialDayOfMonth.toString());
     const [interval, setInterval] = useState(initialInterval.toString());
+    const [intervalUnit, setIntervalUnit] = useState<'days' | 'weeks' | 'months' | 'quarters' | 'years'>('months');
     const [isDynamic, setIsDynamic] = useState(!!initialDynamic);
     const [dynamicType, setDynamicType] = useState<'percentage' | 'fixed'>(initialDynamic?.type || 'percentage');
     const [dynamicValue, setDynamicValue] = useState(initialDynamic?.value.toString() || '');
@@ -61,10 +63,11 @@ export const EditSavingsPlanModal = ({
                 });
 
                 // Generate and add new investments
-                const periodicSettings = {
-                    startDate,
+                const periodicSettings: PeriodicSettings = {
+                    startDate: new Date(startDate),
                     dayOfMonth: parseInt(dayOfMonth),
                     interval: parseInt(interval),
+                    intervalUnit: intervalUnit,
                     amount: parseFloat(amount),
                     ...(isDynamic ? {
                         dynamic: {
@@ -134,17 +137,28 @@ export const EditSavingsPlanModal = ({
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium mb-1 dark:text-gray-200">
-                            Interval (days)
-                        </label>
-                        <input
-                            type="number"
-                            value={interval}
-                            onChange={(e) => setInterval(e.target.value)}
-                            className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300"
-                            min="1"
-                            required
-                        />
+                        <label className="block text-sm font-medium mb-1 dark:text-gray-200">Interval</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="number"
+                                value={interval}
+                                onChange={(e) => setInterval(e.target.value)}
+                                className="w-24 p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300"
+                                min="1"
+                                required
+                            />
+                            <select
+                                value={intervalUnit}
+                                onChange={(e) => setIntervalUnit(e.target.value as 'days' | 'weeks' | 'months' | 'quarters' | 'years')}
+                                className="flex-1 p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300"
+                            >
+                                <option value="days">Days</option>
+                                <option value="weeks">Weeks</option>
+                                <option value="months">Months</option>
+                                <option value="quarters">Quarters</option>
+                                <option value="years">Years</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div>

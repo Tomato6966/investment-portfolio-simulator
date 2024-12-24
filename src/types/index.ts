@@ -11,7 +11,7 @@ export interface Asset {
 }
 
 export interface HistoricalData {
-    date: string;
+    date: Date;
     price: number;
 }
 
@@ -20,13 +20,15 @@ export interface Investment {
     assetId: string;
     type: 'single' | 'periodic';
     amount: number;
-    date?: string;
+    date?: Date;
     periodicGroupId?: string;
 }
 
 export interface PeriodicSettings {
     dayOfMonth: number;
     interval: number;
+    intervalUnit: 'days' | 'weeks' | 'months' | 'quarters' | 'years';
+    startDate: Date;
     dynamic?: {
         type: 'percentage' | 'fixed';
         value: number;
@@ -37,7 +39,7 @@ export interface PeriodicSettings {
 export interface InvestmentPerformance {
     id: string;
     assetName: string;
-    date: string;
+    date: Date;
     investedAmount: number;
     investedAtPrice: number;
     currentValue: number;
@@ -46,14 +48,14 @@ export interface InvestmentPerformance {
 }
 
 export interface DateRange {
-    startDate: string;
-    endDate: string;
+    startDate: Date;
+    endDate: Date;
 }
 
 export interface InvestmentPerformance {
     id: string;
     assetName: string;
-    date: string;
+    date: Date;
     investedAmount: number;
     investedAtPrice: number;
     currentValue: number;
@@ -75,7 +77,7 @@ export interface PortfolioPerformance {
 }
 
 export type DayData = {
-    date: string;
+    date: Date;
     total: number;
     invested: number;
     percentageChange: number;
@@ -87,7 +89,7 @@ export interface WithdrawalPlan {
     amount: number;
     interval: 'monthly' | 'yearly';
     startTrigger: 'date' | 'portfolioValue' | 'auto';
-    startDate?: string;
+    startDate?: Date;
     startPortfolioValue?: number;
     enabled: boolean;
     autoStrategy?: {
@@ -98,7 +100,7 @@ export interface WithdrawalPlan {
 }
 
 export interface ProjectionData {
-    date: string;
+    date: Date;
     value: number;
     invested: number;
     withdrawals: number;
@@ -112,7 +114,7 @@ export interface SustainabilityAnalysis {
 }
 
 export interface PeriodicSettings {
-    startDate: string;
+    startDate: Date;
     dayOfMonth: number;
     interval: number;
     amount: number;

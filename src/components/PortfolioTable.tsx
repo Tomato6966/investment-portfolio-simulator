@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, isBefore } from "date-fns";
 import {
 	Download, FileDown, LineChart, Loader2, Pencil, RefreshCw, ShoppingBag, Trash2
 } from "lucide-react";
@@ -306,7 +306,7 @@ export default function PortfolioTable() {
                                                             assetId: asset.id,
                                                             groupId,
                                                             amount: firstInvestment.amount,
-                                                            dayOfMonth: parseInt(firstInvestment.date!.split('-')[2]),
+                                                            dayOfMonth: firstInvestment.date?.getDate() || 0,
                                                             interval: 30, // You might want to store this in the investment object
                                                             // Add dynamic settings if available
                                                         })}
@@ -432,7 +432,7 @@ export default function PortfolioTable() {
                                         </tr>
                                     </>
                                 )}
-                                {performance.investments.sort((a, b) => a.date.localeCompare(b.date)).map((inv, index) => {
+                                {performance.investments.sort((a, b) => isBefore(a.date, b.date) ? -1 : 1).map((inv, index) => {
                                     const asset = assets.find(a => a.name === inv.assetName)!;
                                     const investment = asset.investments.find(i => i.id === inv.id)! || inv;
                                     const filtered = performance.investments.filter(v => v.assetName === inv.assetName);

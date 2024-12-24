@@ -1,4 +1,4 @@
-import { format, startOfYear } from "date-fns";
+import { startOfYear } from "date-fns";
 import { createContext, useMemo, useReducer } from "react";
 
 import { Asset, DateRange, HistoricalData, Investment } from "../types";
@@ -29,8 +29,8 @@ const initialState: PortfolioState = {
     assets: [],
     isLoading: false,
     dateRange: {
-        startDate: format(startOfYear(new Date()), 'yyyy-MM-dd'),
-        endDate: format(new Date(), 'yyyy-MM-dd'),
+        startDate: startOfYear(new Date()),
+        endDate: new Date(),
     },
 };
 

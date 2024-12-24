@@ -1,11 +1,12 @@
+import { format, isValid, parseISO } from "date-fns";
 import { useRef } from "react";
 import { useDebouncedCallback } from "use-debounce";
 
 interface DateRangePickerProps {
-    startDate: string;
-    endDate: string;
-    onStartDateChange: (date: string) => void;
-    onEndDateChange: (date: string) => void;
+    startDate: Date;
+    endDate: Date;
+    onStartDateChange: (date: Date) => void;
+    onEndDateChange: (date: Date) => void;
 }
 
 export const DateRangePicker = ({
@@ -17,24 +18,44 @@ export const DateRangePicker = ({
     const startDateRef = useRef<HTMLInputElement>(null);
     const endDateRef = useRef<HTMLInputElement>(null);
 
+    const formatDateToISO = (date: Date) => {
+        return format(date, 'yyyy-MM-dd');
+    };
+
     const isValidDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date instanceof Date && !isNaN(date.getTime()) && dateString.length === 10;
+        const parsed = parseISO(dateString);
+        return isValid(parsed);
     };
 
     const debouncedStartDateChange = useDebouncedCallback(
-        (newDate: string) => {
-            if (newDate !== startDate && isValidDate(newDate)) {
-                onStartDateChange(newDate);
+        (dateString: string) => {
+            if (isValidDate(dateString)) {
+                const newDate = new Date(Date.UTC(
+                    parseISO(dateString).getUTCFullYear(),
+                    parseISO(dateString).getUTCMonth(),
+                    parseISO(dateString).getUTCDate()
+                ));
+
+                if (newDate.getTime() !== startDate.getTime()) {
+                    onStartDateChange(newDate);
+                }
             }
         },
         750
     );
 
     const debouncedEndDateChange = useDebouncedCallback(
-        (newDate: string) => {
-            if (newDate !== endDate && isValidDate(newDate)) {
-                onEndDateChange(newDate);
+        (dateString: string) => {
+            if (isValidDate(dateString)) {
+                const newDate = new Date(Date.UTC(
+                    parseISO(dateString).getUTCFullYear(),
+                    parseISO(dateString).getUTCMonth(),
+                    parseISO(dateString).getUTCDate()
+                ));
+
+                if (newDate.getTime() !== endDate.getTime()) {
+                    onEndDateChange(newDate);
+                }
             }
         },
         750
@@ -59,10 +80,11 @@ export const DateRangePicker = ({
                 <input
                     ref={startDateRef}
                     type="date"
-                    defaultValue={startDate}
+                    defaultValue={formatDateToISO(startDate)}
                     onChange={handleStartDateChange}
-                    max={endDate}
+                    max={formatDateToISO(endDate)}
                     className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300 [&::-webkit-calendar-picker-indicator]:dark:invert"
+                    lang="de"
                 />
             </div>
             <div>
@@ -70,11 +92,12 @@ export const DateRangePicker = ({
                 <input
                     ref={endDateRef}
                     type="date"
-                    defaultValue={endDate}
+                    defaultValue={formatDateToISO(endDate)}
                     onChange={handleEndDateChange}
-                    min={startDate}
-                    max={new Date().toISOString().split('T')[0]}
+                    min={formatDateToISO(startDate)}
+                    max={formatDateToISO(new Date())}
                     className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300 [&::-webkit-calendar-picker-indicator]:dark:invert"
+                    lang="de"
                 />
             </div>
         </div>

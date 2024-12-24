@@ -1,4 +1,6 @@
-import { isAfter, isBefore, isSameDay } from "date-fns";
+import {
+	addDays, addMonths, addWeeks, addYears, isAfter, isBefore, isSameDay, setDate
+} from "date-fns";
 
 import type { Asset, Investment, PeriodicSettings } from "../../types";
 
@@ -13,7 +15,7 @@ export const calculateAssetValueAtDate = (asset: Asset, date: Date, currentPrice
 
         // Find price at investment date
         const investmentPrice = asset.historicalData.find(
-            (data) => data.date === investment.date
+            (data) => isSameDay(data.date, invDate)
         )?.price || 0;
 
         // if no investment price found, use the previous price
@@ -39,26 +41,42 @@ export const calculateAssetValueAtDate = (asset: Asset, date: Date, currentPrice
     }
 };
 
-export const generatePeriodicInvestments = (settings: PeriodicSettings, endDate: string, assetId: string): Investment[] => {
+
+export const generatePeriodicInvestments = (settings: PeriodicSettings, endDate: Date, assetId: string): Investment[] => {
     const investments: Investment[] = [];
     const periodicGroupId = crypto.randomUUID();
-    let currentDate = new Date(settings.startDate);
+
+    // Create UTC dates
+    let currentDate = new Date(Date.UTC(
+        settings.startDate.getUTCFullYear(),
+        settings.startDate.getUTCMonth(),
+        settings.startDate.getUTCDate()
+    ));
+
+    const end = new Date(Date.UTC(
+        endDate.getUTCFullYear(),
+        endDate.getUTCMonth(),
+        endDate.getUTCDate()
+    ));
+
     let currentAmount = settings.amount;
-    const end = new Date(endDate);
 
     while (currentDate <= end) {
-        // Only create investment if it's on the specified day of month
-        if (currentDate.getDate() === settings.dayOfMonth) {
+        // For monthly/yearly intervals, ensure we're on the correct day of month
+        if (settings.intervalUnit !== 'days') {
+            currentDate = setDate(currentDate, settings.dayOfMonth);
+        }
+
+        // Only add investment if we haven't passed the end date
+        if (currentDate <= end) {
             // Handle dynamic increases if configured
             if (settings.dynamic) {
                 const yearsSinceStart =
-                    (currentDate.getTime() - new Date(settings.startDate).getTime()) /
+                    (currentDate.getTime() - settings.startDate.getTime()) /
                     (1000 * 60 * 60 * 24 * 365);
 
-                // Check if we've reached a year interval for increase
                 if (yearsSinceStart > 0 && yearsSinceStart % settings.dynamic.yearInterval === 0) {
                     if (settings.dynamic.type === 'percentage') {
-                        console.log('percentage', settings.dynamic.value, (1 + (settings.dynamic.value / 100)));
                         currentAmount *= (1 + (settings.dynamic.value / 100));
                     } else {
                         currentAmount += settings.dynamic.value;
@@ -70,24 +88,38 @@ export const generatePeriodicInvestments = (settings: PeriodicSettings, endDate:
                 id: crypto.randomUUID(),
                 type: 'periodic',
                 amount: currentAmount,
-                date: currentDate.toISOString().split('T')[0],
+                date: currentDate,
                 periodicGroupId,
                 assetId
             });
         }
 
-        // Move to next interval day
-        const nextDate = new Date(currentDate);
-        nextDate.setDate(nextDate.getDate() + settings.interval);
-
-        // Ensure we maintain the correct day of month
-        if (nextDate.getDate() !== settings.dayOfMonth) {
-            nextDate.setDate(1);
-            nextDate.setMonth(nextDate.getMonth() + 1);
-            nextDate.setDate(settings.dayOfMonth);
+        // Calculate next date based on interval unit
+        switch (settings.intervalUnit) {
+            case 'days':
+                currentDate = addDays(currentDate, settings.interval);
+                break;
+            case 'weeks':
+                currentDate = addWeeks(currentDate, settings.interval);
+                break;
+            case 'months':
+                currentDate = addMonths(currentDate, settings.interval);
+                // Ensure we maintain the correct day of month using UTC
+                if (currentDate.getUTCDate() !== settings.dayOfMonth) {
+                    currentDate = setDate(currentDate, settings.dayOfMonth);
+                }
+                break;
+            case 'quarters':
+                currentDate = addMonths(currentDate, settings.interval * 3);
+                break;
+            case 'years':
+                currentDate = addYears(currentDate, settings.interval);
+                // Ensure we maintain the correct day of month using UTC
+                if (currentDate.getUTCDate() !== settings.dayOfMonth) {
+                    currentDate = setDate(currentDate, settings.dayOfMonth);
+                }
+                break;
         }
-
-        currentDate = nextDate;
     }
 
     return investments;

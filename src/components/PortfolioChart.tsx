@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { BarChart2, Eye, EyeOff, Maximize2, X } from "lucide-react";
+import { BarChart2, Eye, EyeOff, Maximize2, RefreshCcw, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import {
 	CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis
@@ -27,7 +27,7 @@ export default function PortfolioChart() {
     }));
 
     const fetchHistoricalData = useCallback(
-        async (startDate: string, endDate: string) => {
+        async (startDate: Date, endDate: Date) => {
             for (const asset of assets) {
                 const { historicalData, longName } = await getHistoricalData(asset.symbol, startDate, endDate);
                 updateAssetHistoricalData(asset.id, historicalData, longName);
@@ -66,14 +66,15 @@ export default function PortfolioChart() {
 
     // Calculate percentage changes for each asset
     const processedData = useMemo(() => data.map(point => {
-        const processed: { [key: string]: number | string } = {
-            date: point.date,
+        const processed: { date: string, total: number, invested: number, percentageChange: number, ttwor: number, ttwor_percent: number, [key: string]: number | string } = {
+            date: format(point.date, 'yyyy-MM-dd'),
             total: point.total,
             invested: point.invested,
             percentageChange: point.percentageChange,
+            ttwor: 0,
+            ttwor_percent: 0,
         };
 
-        processed["ttwor"] = 0;
         for (const asset of assets) {
             const initialPrice = data[0].assets[asset.id];
             const currentPrice = point.assets[asset.id];
@@ -81,11 +82,11 @@ export default function PortfolioChart() {
                 processed[`${asset.id}_price`] = currentPrice;
                 const percentDecimal = ((currentPrice - initialPrice) / initialPrice);
                 processed[`${asset.id}_percent`] = percentDecimal * 100;
-                processed["ttwor"] += allAssetsInvestedKapitals[asset.id] + allAssetsInvestedKapitals[asset.id] * percentDecimal;
+                processed.ttwor += allAssetsInvestedKapitals[asset.id] + allAssetsInvestedKapitals[asset.id] * percentDecimal;
             }
         }
 
-        processed["ttwor_percent"] = (processed["ttwor"] - Object.values(allAssetsInvestedKapitals).reduce((acc, curr) => acc + curr, 0)) / Object.values(allAssetsInvestedKapitals).reduce((acc, curr) => acc + curr, 0) * 100;
+        processed.ttwor_percent = (processed.ttwor - Object.values(allAssetsInvestedKapitals).reduce((acc, curr) => acc + curr, 0)) / Object.values(allAssetsInvestedKapitals).reduce((acc, curr) => acc + curr, 0) * 100;
 
 
         // add a processed["ttwor"] ttwor is what if you invested all of the kapital of all assets at the start of the period
@@ -170,6 +171,12 @@ export default function PortfolioChart() {
         debouncedFetchHistoricalData(newRange.startDate, newRange.endDate);
     }, [updateDateRange, debouncedFetchHistoricalData]);
 
+    const [renderKey, setRenderKey] = useState(0);
+
+    const handleReRender = useCallback(() => {
+        setRenderKey(prevKey => prevKey + 1);
+    }, []);
+
     const ChartContent = useCallback(() => (
         <>
             <div className="flex justify-between items-center mb-4">
@@ -179,26 +186,34 @@ export default function PortfolioChart() {
                     onStartDateChange={(date) => handleUpdateDateRange({ ...dateRange, startDate: date })}
                     onEndDateChange={(date) => handleUpdateDateRange({ ...dateRange, endDate: date })}
                 />
-                <button
-                    onClick={() => setIsFullscreen(!isFullscreen)}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
-                >
-                    <Maximize2 className="w-5 h-5" />
-                </button>
+                <div className="flex items-center">
+                    <button
+                        onClick={handleReRender}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded ml-2 hover:text-blue-500"
+                    >
+                        <RefreshCcw className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={() => setIsFullscreen(!isFullscreen)}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded hover:text-blue-500"
+                    >
+                        <Maximize2 className="w-5 h-5" />
+                    </button>
+                </div>
             </div>
-            <div className={isFullscreen ? "h-[80vh]" : "h-[400px]"}>
+            <div className={isFullscreen ? "h-[80vh]" : "h-[400px]"} key={renderKey}>
                 <ResponsiveContainer>
-                    <LineChart data={processedData}>
+                    <LineChart data={processedData} className="p-3">
                         <CartesianGrid strokeDasharray="3 3" className="dark:stroke-slate-600" />
                         <XAxis
                             tick={{ fill: isDarkMode ? '#D8D8D8' : '#4E4E4E' }}
                             dataKey="date"
-                            tickFormatter={(date) => format(new Date(date), 'MMM dd')}
+                            tickFormatter={(date) => format(new Date(date), 'dd.MM.yyyy')}
                         />
                         <YAxis
                             tick={{ fill: isDarkMode ? '#D8D8D8' : '#4E4E4E' }}
                             yAxisId="left"
-                            tickFormatter={(value) => `${value.toLocaleString()}€`}
+                            tickFormatter={(value) => `${value.toFixed(2)}€`}
                         />
                         <YAxis
                             tick={{ fill: isDarkMode ? '#D8D8D8' : '#4E4E4E' }}
@@ -231,8 +246,9 @@ export default function PortfolioChart() {
 
                                 return [`${value.toLocaleString()}€ (${((value - Number(assets[assetKey])) / Number(assets[assetKey]) * 100).toFixed(2)}%)`, name];
                             }}
-                            labelFormatter={(date) => format(new Date(date), 'MMM dd, yyyy')}
-                        />
+                            labelFormatter={(date) => format(new Date(date), 'dd.MM.yyyy')}
+                        >
+                        </Tooltip>
                         <Legend content={<CustomLegend />} />
                         <Line
                             type="monotone"
@@ -292,16 +308,19 @@ export default function PortfolioChart() {
                 </ResponsiveContainer>
             </div>
             <i className="text-xs text-gray-500">
-                Note: The YAxis on the left shows the value of your portfolio (black line) and invested capital (dotted line),
+                *Note: The YAxis on the left shows the value of your portfolio (black line) and invested capital (dotted line),
                 all other assets are scaled by their % gain/loss and thus scaled to the right YAxis.
             </i>
+            <p className="text-xs mt-2 text-gray-500 italic">
+                **Note: The % is based on daily weighted average data, thus the percentages might alter slightly.
+            </p>
         </>
-    ), [assets, isDarkMode, assetColors, handleUpdateDateRange, hideAssets, hiddenAssets, processedData, CustomLegend, dateRange, isFullscreen]);
+    ), [assets, handleReRender, isDarkMode, assetColors, handleUpdateDateRange, hideAssets, hiddenAssets, processedData, CustomLegend, dateRange, isFullscreen, renderKey]);
 
 
     if (isFullscreen) {
         return (
-            <div className="fixed inset-0 bg-white dark:bg-slate-800 z-50 p-6">
+            <div className="fixed inset-0 bg-white dark:bg-slate-800 z-50">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold">Portfolio Chart</h2>
                     <button

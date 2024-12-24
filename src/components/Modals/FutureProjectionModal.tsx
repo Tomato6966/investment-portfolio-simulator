@@ -1,3 +1,4 @@
+import { isSameDay } from "date-fns";
 import { BarChart as BarChartIcon, LineChart as LineChartIcon, Loader2, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import {
@@ -9,7 +10,6 @@ import { calculateFutureProjection } from "../../utils/calculations/futureProjec
 import { formatCurrency } from "../../utils/formatters";
 
 import type { ProjectionData, SustainabilityAnalysis, WithdrawalPlan } from "../../types";
-
 interface FutureProjectionModalProps {
     performancePerAnno: number;
     bestPerformancePerAnno: { percentage: number, year: number }[];
@@ -39,7 +39,7 @@ export const FutureProjectionModal = ({
         amount: 0,
         interval: 'monthly',
         startTrigger: 'auto',
-        startDate: new Date().toISOString().split('T')[0],
+        startDate: new Date(),
         startPortfolioValue: 0,
         enabled: false,
         autoStrategy: {
@@ -65,8 +65,8 @@ export const FutureProjectionModal = ({
             );
             setProjectionData(projection);
             setSustainabilityAnalysis(sustainability);
-            const slicedBestCase = bestPerformancePerAnno.slice(0, Math.floor(bestPerformancePerAnno.length / 2));
-            const slicedWorstCase = worstPerformancePerAnno.slice(0, Math.floor(worstPerformancePerAnno.length / 2));
+            const slicedBestCase = bestPerformancePerAnno.slice(0, bestPerformancePerAnno.length > 1 ? Math.floor(bestPerformancePerAnno.length / 2) : 1);
+            const slicedWorstCase = worstPerformancePerAnno.slice(0, worstPerformancePerAnno.length > 1 ? Math.floor(worstPerformancePerAnno.length / 2) : 1);
             const bestCase = slicedBestCase.reduce((acc, curr) => acc + curr.percentage, 0) / slicedBestCase.length || 0;
             const worstCase = slicedWorstCase.reduce((acc, curr) => acc + curr.percentage, 0) / slicedWorstCase.length || 0;
 
@@ -335,8 +335,8 @@ export const FutureProjectionModal = ({
         // Create a merged and sorted dataset for consistent x-axis
         const mergedData = projectionData.map(basePoint => {
             const date = basePoint.date;
-            const bestPoint = scenarios.best.projection.find(p => p.date === date);
-            const worstPoint = scenarios.worst.projection.find(p => p.date === date);
+            const bestPoint = scenarios.best.projection.find(p => isSameDay(p.date, date));
+            const worstPoint = scenarios.worst.projection.find(p => isSameDay(p.date, date));
 
             return {
                 date,
@@ -549,10 +549,10 @@ export const FutureProjectionModal = ({
                                         </label>
                                         <input
                                             type="date"
-                                            value={withdrawalPlan.startDate}
+                                            value={withdrawalPlan.startDate?.toISOString().split('T')[0]}
                                             onChange={(e) => setWithdrawalPlan(prev => ({
                                                 ...prev,
-                                                startDate: e.target.value
+                                                startDate: new Date(e.target.value)
                                             }))}
                                             min={new Date().toISOString().split('T')[0]}
                                             className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-gray-200"
