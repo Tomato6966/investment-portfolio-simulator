@@ -82,9 +82,9 @@ export default function PortfolioTable() {
         <div className="space-y-2">
             <p>The performance of your portfolio is {performance.summary.performancePercentage.toFixed(2)}%</p>
             <p>The average (acc.) performance of all positions is {averagePerformance}%</p>
-            <p>The average (p.a.) performance of every year is {performance.summary.performancePerAnnoPerformance.toFixed(2)}%</p>
-            <p>Best p.a.: {performance.summary.bestPerformancePerAnno?.[0]?.percentage?.toFixed(2) || "0.00"}% ({performance.summary.bestPerformancePerAnno?.[0]?.year || "N/A"})</p>
-            <p>Worst p.a.: {performance.summary.worstPerformancePerAnno?.[0]?.percentage?.toFixed(2) || "0.00"}% ({performance.summary.worstPerformancePerAnno?.[0]?.year || "N/A"})</p>
+            <p>The average (p.a.) performance of every year is {(performance.summary.performancePerAnnoPerformance || 0)?.toFixed(2)}%</p>
+            <p>Best p.a.: {(performance.summary.bestPerformancePerAnno?.[0]?.percentage || 0)?.toFixed(2)}% ({performance.summary.bestPerformancePerAnno?.[0]?.year || "N/A"})</p>
+            <p>Worst p.a.: {(performance.summary.worstPerformancePerAnno?.[0]?.percentage || 0)?.toFixed(2)}% ({performance.summary.worstPerformancePerAnno?.[0]?.year || "N/A"})</p>
             <p className="text-xs mt-2">
                 Note: An average performance of positions doesn't always match your entire portfolio's average,
                 especially with single investments or investments on different time ranges.
@@ -307,8 +307,7 @@ export default function PortfolioTable() {
                                                             groupId,
                                                             amount: firstInvestment.amount,
                                                             dayOfMonth: firstInvestment.date?.getDate() || 0,
-                                                            interval: 30, // You might want to store this in the investment object
-                                                            // Add dynamic settings if available
+                                                            interval: 1,
                                                         })}
                                                         className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
                                                     >
@@ -349,7 +348,7 @@ export default function PortfolioTable() {
                                     investedAmount: performance.summary.totalInvested.toFixed(2),
                                     investedAtPrice: "",
                                     currentValue: performance.summary.currentValue.toFixed(2),
-                                    performancePercentage: `${performance.summary.performancePercentage.toFixed(2)}% (avg. acc. ${averagePerformance}%) (avg. p.a. ${performance.summary.performancePerAnnoPerformance.toFixed(2)}%)`,
+                                    performancePercentage: `${performance.summary.performancePercentage.toFixed(2)}% (avg. acc. ${averagePerformance}%) (avg. p.a. ${(performance.summary.performancePerAnnoPerformance || 0).toFixed(2)}%)`,
                                     periodicGroupId: "",
                                 },
                                 {
@@ -411,7 +410,7 @@ export default function PortfolioTable() {
                                                 {performance.summary.performancePercentage.toFixed(2)}%
                                                 <ul>
                                                     <li className="text-xs text-gray-500 dark:text-gray-400">(avg. acc. {averagePerformance}%)</li>
-                                                    <li className="text-xs text-gray-500 dark:text-gray-400">(avg. p.a. {performance.summary.performancePerAnnoPerformance.toFixed(2)}%)</li>
+                                                    <li className="text-xs text-gray-500 dark:text-gray-400">(avg. p.a. {(performance.summary.performancePerAnnoPerformance || 0).toFixed(2)}%)</li>
                                                     <li className="text-[10px] text-gray-500 dark:text-gray-400 italic">(best p.a. {performance.summary.bestPerformancePerAnno?.[0]?.percentage?.toFixed(2) || "0.00"}% {performance.summary.bestPerformancePerAnno?.[0]?.year || "N/A"})</li>
                                                     <li className="text-[10px] text-gray-500 dark:text-gray-400 italic">(worst p.a. {performance.summary.worstPerformancePerAnno?.[0]?.percentage?.toFixed(2) || "0.00"}% {performance.summary.worstPerformancePerAnno?.[0]?.year || "N/A"})</li>
                                                 </ul>

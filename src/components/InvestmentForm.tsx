@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 
+import { useLocaleDateFormat } from "../hooks/useLocalDateFormat";
 import { usePortfolioSelector } from "../hooks/usePortfolio";
 import { generatePeriodicInvestments } from "../utils/calculations/assetValue";
 
@@ -82,6 +83,9 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
         value: 1,
         unit: 'months'
     });
+    const [showIntervalWarning, setShowIntervalWarning] = useState(false);
+
+    const localeDateFormat = useLocaleDateFormat();
 
     const { dateRange, addInvestment } = usePortfolioSelector((state) => ({
         dateRange: state.dateRange,
@@ -140,6 +144,15 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
         }, 10);
     };
 
+    const handleIntervalUnitChange = (unit: IntervalConfig['unit']) => {
+        setIntervalConfig(prev => ({
+            ...prev,
+            unit
+        }));
+
+        setShowIntervalWarning(['days', 'weeks'].includes(unit));
+    };
+
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -170,7 +183,7 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
 
             {type === 'single' ? (
                 <div>
-                    <label className="block text-sm font-medium mb-1">Date</label>
+                    <label className="block text-sm font-medium mb-1">Date {localeDateFormat && <span className="text-xs text-gray-500">({localeDateFormat})</span>}</label>
                     <input
                         type="date"
                         value={date}
@@ -214,10 +227,7 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
                             />
                             <select
                                 value={intervalConfig.unit}
-                                onChange={(e) => setIntervalConfig(prev => ({
-                                    ...prev,
-                                    unit: e.target.value as IntervalConfig['unit']
-                                }))}
+                                onChange={(e) => handleIntervalUnitChange(e.target.value as IntervalConfig['unit'])}
                                 className="flex-1 p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300"
                             >
                                 <option value="days">Days</option>
@@ -227,10 +237,15 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
                                 <option value="years">Years</option>
                             </select>
                         </div>
+                        {showIntervalWarning && (
+                            <p className="mt-2 text-sm text-amber-500 dark:text-amber-400">
+                                Warning: Using short intervals (days/weeks) may result in longer calculation times due to the higher number of investments to process.
+                            </p>
+                        )}
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium mb-1">SavingsPlan-Start Datum</label>
+                        <label className="block text-sm font-medium mb-1">SavingsPlan-Start Datum {localeDateFormat && <span className="text-xs text-gray-500">({localeDateFormat})</span>}</label>
                         <input
                             type="date"
                             value={date}

@@ -1,3 +1,5 @@
+import { formatDate, isValid, parseISO } from "date-fns";
+
 export const formatCurrency = (value: number): string => {
   return `€${value.toLocaleString('de-DE', {
     minimumFractionDigits: 2,
@@ -34,3 +36,6 @@ export const getHexColor = (usedColors: Set<string>, isDarkMode: boolean): strin
     // Fallback to random color if all predefined colors are used
     return `#${Math.floor(Math.random() * 16777215).toString(16)}`;
 };
+
+export const formatDateToISO = (date: Date) => formatDate(date, 'yyyy-MM-dd');
+export const isValidDate = (dateString: string) => isValid(parseISO(dateString));

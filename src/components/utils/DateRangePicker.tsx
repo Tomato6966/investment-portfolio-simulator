@@ -1,6 +1,8 @@
-import { format, isValid, parseISO } from "date-fns";
 import { useRef } from "react";
 import { useDebouncedCallback } from "use-debounce";
+
+import { useLocaleDateFormat } from "../../hooks/useLocalDateFormat";
+import { formatDateToISO, isValidDate } from "../../utils/formatters";
 
 interface DateRangePickerProps {
     startDate: Date;
@@ -17,24 +19,12 @@ export const DateRangePicker = ({
 }: DateRangePickerProps) => {
     const startDateRef = useRef<HTMLInputElement>(null);
     const endDateRef = useRef<HTMLInputElement>(null);
-
-    const formatDateToISO = (date: Date) => {
-        return format(date, 'yyyy-MM-dd');
-    };
-
-    const isValidDate = (dateString: string) => {
-        const parsed = parseISO(dateString);
-        return isValid(parsed);
-    };
+    const localeDateFormat = useLocaleDateFormat();
 
     const debouncedStartDateChange = useDebouncedCallback(
         (dateString: string) => {
             if (isValidDate(dateString)) {
-                const newDate = new Date(Date.UTC(
-                    parseISO(dateString).getUTCFullYear(),
-                    parseISO(dateString).getUTCMonth(),
-                    parseISO(dateString).getUTCDate()
-                ));
+                const newDate = new Date(dateString);
 
                 if (newDate.getTime() !== startDate.getTime()) {
                     onStartDateChange(newDate);
@@ -47,11 +37,7 @@ export const DateRangePicker = ({
     const debouncedEndDateChange = useDebouncedCallback(
         (dateString: string) => {
             if (isValidDate(dateString)) {
-                const newDate = new Date(Date.UTC(
-                    parseISO(dateString).getUTCFullYear(),
-                    parseISO(dateString).getUTCMonth(),
-                    parseISO(dateString).getUTCDate()
-                ));
+                const newDate = new Date(dateString);
 
                 if (newDate.getTime() !== endDate.getTime()) {
                     onEndDateChange(newDate);
@@ -76,7 +62,9 @@ export const DateRangePicker = ({
     return (
         <div className="flex gap-4 items-center mb-4 dark:text-gray-300">
             <div>
-                <label className="block text-sm font-medium mb-1">From</label>
+                <label className="block text-sm font-medium mb-1">
+                    From {localeDateFormat && <span className="text-xs text-gray-500">({localeDateFormat})</span>}
+                </label>
                 <input
                     ref={startDateRef}
                     type="date"
@@ -84,11 +72,12 @@ export const DateRangePicker = ({
                     onChange={handleStartDateChange}
                     max={formatDateToISO(endDate)}
                     className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300 [&::-webkit-calendar-picker-indicator]:dark:invert"
-                    lang="de"
                 />
             </div>
             <div>
-                <label className="block text-sm font-medium mb-1">To</label>
+                <label className="block text-sm font-medium mb-1">
+                    To {localeDateFormat && <span className="text-xs text-gray-500">({localeDateFormat})</span>}
+                </label>
                 <input
                     ref={endDateRef}
                     type="date"
@@ -97,7 +86,6 @@ export const DateRangePicker = ({
                     min={formatDateToISO(startDate)}
                     max={formatDateToISO(new Date())}
                     className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300 [&::-webkit-calendar-picker-indicator]:dark:invert"
-                    lang="de"
                 />
             </div>
         </div>

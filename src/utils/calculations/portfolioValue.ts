@@ -31,7 +31,7 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
         for (const asset of assets) {
             // calculate the invested kapital
             for (const investment of asset.investments) {
-                if (!isAfter(new Date(investment.date!), currentDate)) {
+                if (!isAfter(new Date(investment.date!), currentDate) && !isSameDay(new Date(investment.date!), currentDate)) {
                     dayData.invested += investment.amount;
                 }
             }
@@ -75,7 +75,7 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
         const totalInvested = dayData.invested; // Total invested amount for the day
         const totalCurrentValue = dayData.total; // Total current value for the day
 
-        dayData.percentageChange = totalInvested > 0
+        dayData.percentageChange = totalInvested > 0 && totalCurrentValue > 0
             ? ((totalCurrentValue - totalInvested) / totalInvested) * 100
             : 0;
 

@@ -8,6 +8,7 @@ import {
 import { usePortfolioSelector } from "../../hooks/usePortfolio";
 import { calculateFutureProjection } from "../../utils/calculations/futureProjection";
 import { formatCurrency } from "../../utils/formatters";
+import { Tooltip as InfoTooltip } from "../utils/ToolTip";
 
 import type { ProjectionData, SustainabilityAnalysis, WithdrawalPlan } from "../../types";
 interface FutureProjectionModalProps {
@@ -49,6 +50,7 @@ export const FutureProjectionModal = ({
         },
     });
     const [sustainabilityAnalysis, setSustainabilityAnalysis] = useState<SustainabilityAnalysis | null>(null);
+    const [startFromZero, setStartFromZero] = useState(false);
 
     const { assets } = usePortfolioSelector((state) => ({
         assets: state.assets,
@@ -62,6 +64,7 @@ export const FutureProjectionModal = ({
                 parseInt(years),
                 performancePerAnno,
                 withdrawalPlan.enabled ? withdrawalPlan : undefined,
+                startFromZero
             );
             setProjectionData(projection);
             setSustainabilityAnalysis(sustainability);
@@ -101,7 +104,7 @@ export const FutureProjectionModal = ({
         } finally {
             setIsCalculating(false);
         }
-    }, [assets, years, withdrawalPlan, performancePerAnno, bestPerformancePerAnno, worstPerformancePerAnno]);
+    }, [assets, years, withdrawalPlan, performancePerAnno, bestPerformancePerAnno, worstPerformancePerAnno, startFromZero]);
 
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
@@ -413,11 +416,8 @@ export const FutureProjectionModal = ({
                     <div className="grid grid-cols-2 gap-6">
                         <div>
                             <h3 className="text-lg font-semibold mb-3 dark:text-gray-200">Projection Settings</h3>
-                            <i className="block text-sm font-medium mb-1 dark:text-gray-300">
-                                Project for next {years} years
-                            </i>
-                            <div className="flex gap-4">
-                                <div>
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2">
                                     <input
                                         type="number"
                                         value={years}
@@ -426,33 +426,50 @@ export const FutureProjectionModal = ({
                                         max="50"
                                         className="w-24 p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-gray-200"
                                     />
+                                    <button
+                                        onClick={calculateProjection}
+                                        disabled={isCalculating}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isCalculating ? (
+                                            <Loader2 className="animate-spin" size={16} />
+                                        ) : (
+                                            'Calculate'
+                                        )}
+                                    </button>
+                                    <div className="flex gap-2 ml-auto">
+                                        <button
+                                            onClick={() => setChartType('line')}
+                                            className={`p-2 rounded ${chartType === 'line' ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-slate-700'}`}
+                                            title="Line Chart"
+                                        >
+                                            <LineChartIcon size={20} />
+                                        </button>
+                                        <button
+                                            onClick={() => setChartType('bar')}
+                                            className={`p-2 rounded ${chartType === 'bar' ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-slate-700'}`}
+                                            title="Bar Chart"
+                                        >
+                                            <BarChartIcon size={20} />
+                                        </button>
+                                    </div>
                                 </div>
-                                <button
-                                    onClick={calculateProjection}
-                                    disabled={isCalculating}
-                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isCalculating ? (
-                                        <Loader2 className="animate-spin" size={16} />
-                                    ) : (
-                                        'Calculate'
-                                    )}
-                                </button>
-                                <div className="flex gap-2 ml-auto">
-                                    <button
-                                        onClick={() => setChartType('line')}
-                                        className={`p-2 rounded ${chartType === 'line' ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-slate-700'}`}
-                                        title="Line Chart"
-                                    >
-                                        <LineChartIcon size={20} />
-                                    </button>
-                                    <button
-                                        onClick={() => setChartType('bar')}
-                                        className={`p-2 rounded ${chartType === 'bar' ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-slate-700'}`}
-                                        title="Bar Chart"
-                                    >
-                                        <BarChartIcon size={20} />
-                                    </button>
+
+                                <div className="flex items-center gap-2">
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={startFromZero}
+                                            onChange={(e) => setStartFromZero(e.target.checked)}
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                        <span className="ml-2 text-sm font-medium dark:text-gray-300">
+                                            <InfoTooltip content="Simulate how your savings plan would perform if you started from zero capital today">
+                                                Start from 0€
+                                            </InfoTooltip>
+                                        </span>
+                                    </label>
                                 </div>
                             </div>
                             <div className="mt-10 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-700/50 p-3 rounded">

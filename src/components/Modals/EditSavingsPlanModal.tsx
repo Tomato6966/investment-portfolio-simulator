@@ -1,10 +1,13 @@
+import { format } from "date-fns";
 import { Loader2, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
+import { useLocaleDateFormat } from "../../hooks/useLocalDateFormat";
 import { usePortfolioSelector } from "../../hooks/usePortfolio";
 import { PeriodicSettings } from "../../types";
 import { generatePeriodicInvestments } from "../../utils/calculations/assetValue";
+import { Tooltip } from "../utils/ToolTip";
 
 interface EditSavingsPlanModalProps {
     assetId: string;
@@ -18,6 +21,11 @@ interface EditSavingsPlanModalProps {
         yearInterval: number;
     };
     onClose: () => void;
+}
+
+interface IntervalConfig {
+    value: number;
+    unit: 'days' | 'months' | 'years';
 }
 
 export const EditSavingsPlanModal = ({
@@ -38,6 +46,9 @@ export const EditSavingsPlanModal = ({
     const [dynamicValue, setDynamicValue] = useState(initialDynamic?.value.toString() || '');
     const [yearInterval, setYearInterval] = useState(initialDynamic?.yearInterval.toString() || '1');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showIntervalWarning, setShowIntervalWarning] = useState(false);
+    const [startDate, setStartDate] = useState('');
+    const localeDateFormat = useLocaleDateFormat();
 
     const { dateRange, addInvestment, removeInvestment, assets } = usePortfolioSelector((state) => ({
         dateRange: state.dateRange,
@@ -45,6 +56,13 @@ export const EditSavingsPlanModal = ({
         removeInvestment: state.removeInvestment,
         assets: state.assets,
     }));
+
+    useEffect(() => {
+        const asset = assets.find(a => a.id === assetId)!;
+        const investments = asset.investments.filter(inv => inv.periodicGroupId === groupId);
+        const firstInvestmentDate = investments[0].date!;
+        setStartDate(format(firstInvestmentDate, 'yyyy-MM-dd'));
+    }, [assetId, groupId, assets]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -56,15 +74,14 @@ export const EditSavingsPlanModal = ({
                 // First, remove all existing investments for this savings plan
                 const asset = assets.find(a => a.id === assetId)!;
                 const investments = asset.investments.filter(inv => inv.periodicGroupId === groupId);
-                const startDate = investments[0].date!; // Keep original start date
 
                 investments.forEach(inv => {
                     removeInvestment(assetId, inv.id);
                 });
 
-                // Generate and add new investments
+                // Generate and add new investments with the new start date
                 const periodicSettings: PeriodicSettings = {
-                    startDate: new Date(startDate),
+                    startDate: new Date(startDate), // Use the new start date
                     dayOfMonth: parseInt(dayOfMonth),
                     interval: parseInt(interval),
                     intervalUnit: intervalUnit,
@@ -93,6 +110,11 @@ export const EditSavingsPlanModal = ({
                 setIsSubmitting(false);
             }
         }, 10);
+    };
+
+    const handleIntervalUnitChange = (unit: IntervalConfig['unit']) => {
+        setIntervalUnit(unit);
+        setShowIntervalWarning(['days', 'weeks'].includes(unit));
     };
 
     return (
@@ -137,7 +159,11 @@ export const EditSavingsPlanModal = ({
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium mb-1 dark:text-gray-200">Interval</label>
+                        <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                            <Tooltip content="Choose the interval for your regular investments. For monthly payments on the 1st of a month, investments will automatically be executed on the 1st of each month.">
+                                Interval
+                            </Tooltip>
+                        </label>
                         <div className="flex gap-2">
                             <input
                                 type="number"
@@ -149,7 +175,7 @@ export const EditSavingsPlanModal = ({
                             />
                             <select
                                 value={intervalUnit}
-                                onChange={(e) => setIntervalUnit(e.target.value as 'days' | 'weeks' | 'months' | 'quarters' | 'years')}
+                                onChange={(e) => handleIntervalUnitChange(e.target.value as IntervalConfig['unit'])}
                                 className="flex-1 p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300"
                             >
                                 <option value="days">Days</option>
@@ -159,6 +185,11 @@ export const EditSavingsPlanModal = ({
                                 <option value="years">Years</option>
                             </select>
                         </div>
+                        {showIntervalWarning && (
+                            <p className="mt-2 text-sm text-amber-500 dark:text-amber-400">
+                                Warning: Using short intervals (days/weeks) may result in longer calculation times due to the higher number of investments to process.
+                            </p>
+                        )}
                     </div>
 
                     <div>
@@ -219,6 +250,20 @@ export const EditSavingsPlanModal = ({
                             </div>
                         </>
                     )}
+
+                    <div>
+                        <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                            Start Date {localeDateFormat && <span className="text-xs text-gray-500">({localeDateFormat})</span>}
+                        </label>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="w-full p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300 [&::-webkit-calendar-picker-indicator]:dark:invert"
+                            required
+                            lang="de"
+                        />
+                    </div>
 
                     <div className="flex justify-end gap-2">
                         <button

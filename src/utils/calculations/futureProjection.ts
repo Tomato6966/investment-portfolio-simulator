@@ -52,6 +52,7 @@ export const calculateFutureProjection = async (
     yearsToProject: number,
     annualReturnRate: number,
     withdrawalPlan?: WithdrawalPlan,
+    startFromZero: boolean = false
 ): Promise<{
     projection: ProjectionData[];
     sustainability: SustainabilityAnalysis;
@@ -67,6 +68,7 @@ export const calculateFutureProjection = async (
     const periodicInvestments = currentAssets.flatMap(asset => {
         const patterns = new Map<string, Investment[]>();
 
+        // When startFromZero is true, only include periodic investments
         asset.investments.forEach(inv => {
             if (inv.type === 'periodic' && inv.periodicGroupId) {
                 if (!patterns.has(inv.periodicGroupId)) {
@@ -115,17 +117,27 @@ export const calculateFutureProjection = async (
 
     // Calculate monthly values
     let currentDate = new Date();
-    let totalInvested = currentAssets.reduce(
-        (sum, asset) => sum + asset.investments.reduce(
-            (assetSum, inv) => assetSum + inv.amount, 0
-        ), 0
-    );
+
+    // Initialize totalInvested based on startFromZero flag
+    let totalInvested = 0;
+    if (!startFromZero) {
+        // Include all investments if not starting from zero
+        totalInvested = currentAssets.reduce(
+            (sum, asset) => sum + asset.investments.reduce(
+                (assetSum, inv) => assetSum + inv.amount, 0
+            ), 0
+        );
+    } else {
+        // Start from zero when startFromZero is true
+        totalInvested = 0;
+        // Don't initialize with any periodic investments - they'll accumulate over time
+    }
 
     let totalWithdrawn = 0;
     let yearsToReachTarget = 0;
     let targetValue = 0;
     let sustainableYears: number | 'infinite' = 'infinite';
-    let portfolioValue = totalInvested; // Initialize portfolio value with current investments
+    let portfolioValue = startFromZero ? 0 : totalInvested; // Start from 0 if startFromZero is true
     let withdrawalsStarted = false;
     let withdrawalStartDate: Date | null = null;
     let portfolioDepletionDate: Date | null = null;
@@ -172,10 +184,11 @@ export const calculateFutureProjection = async (
             const monthlyInvestment = monthInvestments.reduce(
                 (sum, inv) => sum + inv.amount, 0
             );
+
+            // Always add periodic investments to both totalInvested and portfolioValue
             totalInvested += monthlyInvestment;
             portfolioValue += monthlyInvestment;
         }
-
 
         // Handle withdrawals
         let monthlyWithdrawal = 0;
