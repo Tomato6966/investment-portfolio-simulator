@@ -1,8 +1,9 @@
 import "jspdf-autotable";
 
+import { isBefore, isSameDay } from "date-fns";
 import { jsPDF } from "jspdf";
 
-import { Asset } from "../types";
+import { Asset, PortfolioPerformance } from "../types";
 import { calculateFutureProjection } from "./calculations/futureProjection";
 
 // Add type augmentation for the autotable plugin
@@ -39,7 +40,7 @@ export const downloadTableAsCSV = (tableData: any[], filename: string) => {
 
 export const generatePortfolioPDF = async (
     assets: Asset[],
-    performance: any,
+    performance: PortfolioPerformance,
     savingsPlansPerformance: any[],
     performancePerAnno: number
 ) => {
@@ -120,7 +121,7 @@ export const generatePortfolioPDF = async (
             `${performance.summary.ttworPercentage.toFixed(2)}%`,
         ],
         // Individual positions
-        ...performance.investments.sort((a: any, b: any) => a.date.localeCompare(b.date)).map((inv: any) => {
+        ...performance.investments.sort((a, b) => (isBefore(a.date, b.date) || isSameDay(a.date, b.date)) ? -1 : 1).map((inv) => {
             const asset = assets.find(a => a.name === inv.assetName)!;
             const investment = asset.investments.find(i => i.id === inv.id)! || inv;
             const filtered = performance.investments.filter((v: any) => v.assetName === inv.assetName);
