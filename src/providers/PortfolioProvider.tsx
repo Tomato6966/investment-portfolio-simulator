@@ -1,7 +1,7 @@
 import { startOfYear } from "date-fns";
 import { createContext, useMemo, useReducer } from "react";
 
-import { Asset, DateRange, HistoricalData, Investment } from "../types";
+import { Asset, DateRange, Investment } from "../types";
 
 // State Types
 interface PortfolioState {
@@ -19,7 +19,7 @@ type PortfolioAction =
     | { type: 'ADD_INVESTMENT'; payload: { assetId: string; investment: Investment | Investment[] } }
     | { type: 'REMOVE_INVESTMENT'; payload: { assetId: string; investmentId: string } }
     | { type: 'UPDATE_DATE_RANGE'; payload: DateRange }
-    | { type: 'UPDATE_ASSET_HISTORICAL_DATA'; payload: { assetId: string; historicalData: HistoricalData[]; longName?: string } }
+    | { type: 'UPDATE_ASSET_HISTORICAL_DATA'; payload: { assetId: string; historicalData: Asset['historicalData']; longName?: string } }
     | { type: 'UPDATE_INVESTMENT'; payload: { assetId: string; investmentId: string; investment: Investment } }
     | { type: 'CLEAR_INVESTMENTS' }
     | { type: 'SET_ASSETS'; payload: Asset[] };
@@ -130,7 +130,7 @@ export interface PortfolioContextType extends PortfolioState {
     addInvestment: (assetId: string, investment: Investment | Investment[]) => void;
     removeInvestment: (assetId: string, investmentId: string) => void;
     updateDateRange: (dateRange: DateRange) => void;
-    updateAssetHistoricalData: (assetId: string, historicalData: HistoricalData[], longName?: string) => void;
+    updateAssetHistoricalData: (assetId: string, historicalData: Asset['historicalData'], longName?: string) => void;
     updateInvestment: (assetId: string, investmentId: string, investment: Investment) => void;
     clearInvestments: () => void;
     setAssets: (assets: Asset[]) => void;
@@ -154,7 +154,7 @@ export const PortfolioProvider = ({ children }: { children: React.ReactNode }) =
             dispatch({ type: 'REMOVE_INVESTMENT', payload: { assetId, investmentId } }),
         updateDateRange: (dateRange: DateRange) =>
             dispatch({ type: 'UPDATE_DATE_RANGE', payload: dateRange }),
-        updateAssetHistoricalData: (assetId: string, historicalData: HistoricalData[], longName?: string) =>
+        updateAssetHistoricalData: (assetId: string, historicalData: Asset['historicalData'], longName?: string) =>
             dispatch({ type: 'UPDATE_ASSET_HISTORICAL_DATA', payload: { assetId, historicalData, longName } }),
         updateInvestment: (assetId: string, investmentId: string, investment: Investment) =>
             dispatch({ type: 'UPDATE_INVESTMENT', payload: { assetId, investmentId, investment } }),

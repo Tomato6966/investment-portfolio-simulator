@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import toast from "react-hot-toast";
 
 import { useLocaleDateFormat } from "../hooks/useLocalDateFormat";
@@ -69,7 +69,7 @@ interface IntervalConfig {
     unit: 'days' | 'months' | 'years';
 }
 
-const InvestmentForm = ({ assetId }: { assetId: string }) => {
+const InvestmentForm = memo(({ assetId }: { assetId: string }) => {
     const [type, setType] = useState<'single' | 'periodic'>('single');
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState('');
@@ -328,4 +328,4 @@ const InvestmentForm = ({ assetId }: { assetId: string }) => {
             </button>
         </form>
     );
-};
+});

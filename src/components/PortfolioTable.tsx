@@ -1,14 +1,17 @@
 import { format, isBefore } from "date-fns";
 import {
-	Download, FileDown, LineChart, Loader2, Pencil, RefreshCw, ShoppingBag, Trash2
+	BarChart, BarChart2, Download, FileDown, LineChart, Loader2, Pencil, RefreshCw, ShoppingBag,
+	Trash2, TrendingDown, TrendingUp
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 import { usePortfolioSelector } from "../hooks/usePortfolio";
 import { Investment } from "../types";
 import { calculateInvestmentPerformance } from "../utils/calculations/performance";
 import { downloadTableAsCSV, generatePortfolioPDF } from "../utils/export";
+import { AssetPerformanceModal } from "./Chart/AssetPerformanceModal";
+import { PortfolioPerformanceModal } from "./Chart/PortfolioPerformanceModal";
 import { EditInvestmentModal } from "./Modals/EditInvestmentModal";
 import { EditSavingsPlanModal } from "./Modals/EditSavingsPlanModal";
 import { FutureProjectionModal } from "./Modals/FutureProjectionModal";
@@ -24,7 +27,7 @@ interface SavingsPlanPerformance {
     allocation?: number;
 }
 
-export default function PortfolioTable() {
+export default memo(function PortfolioTable() {
     const { assets, removeInvestment, clearInvestments } = usePortfolioSelector((state) => ({
         assets: state.assets,
         removeInvestment: state.removeInvestment,
@@ -49,6 +52,7 @@ export default function PortfolioTable() {
             yearInterval: number;
         };
     } | null>(null);
+    const [showPortfolioPerformance, setShowPortfolioPerformance] = useState(false);
 
     const performance = useMemo(() => calculateInvestmentPerformance(assets), [assets]);
 
@@ -210,8 +214,82 @@ export default function PortfolioTable() {
         }
     }, [assets, removeInvestment]);
 
+    const [selectedAsset, setSelectedAsset] = useState<{
+        name: string;
+        performances: { year: number; percentage: number }[];
+    } | null>(null);
+
     return (
         <div className="space-y-4">
+            <div className="overflow-x-auto dark:text-gray-300 p-4 border-gray-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-800 shadow-lg dark:shadow-black/60">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <BarChart className="w-6 h-6" />
+                    Assets Performance Overview
+                </h2>
+                <i>Calculated performance of each asset as of "paper"</i>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {assets.map(asset => {
+                        const datas = Array.from(asset.historicalData.values());
+                        const startPrice = datas.shift();
+                        const endPrice = datas.pop();
+                        const avgPerformance = performance.summary.annualPerformancesPerAsset.get(asset.id);
+                        const averagePerf = ((avgPerformance?.reduce?.((acc, curr) => acc + curr.percentage, 0) || 0) / (avgPerformance?.length || 1));
+
+                        return (
+                            <div
+                                key={asset.id}
+                                className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                            >
+                                <h3 className="text-lg font-bold mb-2 text-nowrap">{asset.name}</h3>
+                                <div className="space-y-2">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr>
+                                                <th>Start Price:</th>
+                                                <th>Current Price:</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td className="text-center">€{startPrice?.toFixed(2) || 'N/A'}</td>
+                                                <td className="text-center">€{endPrice?.toFixed(2) || 'N/A'}
+                                                <i className="pl-2 text-xs">({endPrice && startPrice && endPrice - startPrice > 0 ? '+' : ''}{endPrice && startPrice && ((endPrice - startPrice) / startPrice * 100).toFixed(2)}%)</i>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <button
+                                        onClick={() => avgPerformance && setSelectedAsset({
+                                            name: asset.name,
+                                            performances: avgPerformance
+                                        })}
+                                        className="w-full mt-2 p-3 border bg-gray-100 border-gray-500 dark:border-gray-500 dark:bg-slate-800 rounded-lg flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                                    >
+                                        <span className="text-gray-500 dark:text-gray-400">Avg. Performance:</span>
+                                        <span className={`flex items-center gap-1 font-bold ${
+                                            averagePerf >= 0 ? 'text-green-500' : 'text-red-500'
+                                        }`}>
+                                            {averagePerf.toFixed(2)}%
+                                            {averagePerf >= 0 ? (
+                                                <TrendingUp className="w-4 h-4" />
+                                            ) : (
+                                                <TrendingDown className="w-4 h-4" />
+                                            )}
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+                {selectedAsset && (
+                    <AssetPerformanceModal
+                        assetName={selectedAsset.name}
+                        performances={selectedAsset.performances}
+                        onClose={() => setSelectedAsset(null)}
+                    />
+                )}
+            </div>
             <div className="overflow-x-auto min-h-[500px] dark:text-gray-300 p-4 border-gray-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-800 shadow-lg dark:shadow-black/60">
                 <div className="flex flex-wrap justify-between items-center mb-4">
                     <h2 className="text-xl font-bold dark:text-gray-100">Portfolio's <u>Positions</u> Overview</h2>
@@ -243,6 +321,15 @@ export default function PortfolioTable() {
                                 <FileDown size={16} />
                             )}
                             {isGeneratingPDF ? 'Generating...' : 'Save Analysis'}
+                        </button>
+
+                        <button
+                            onClick={() => setShowPortfolioPerformance(true)}
+                            disabled={performance.investments.length === 0}
+                            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <BarChart2 size={16} />
+                            Portfolio Performance History
                         </button>
                     </div>
                 </div>
@@ -505,6 +592,12 @@ export default function PortfolioTable() {
                     onClose={() => setEditingSavingsPlan(null)}
                 />
             )}
+            {showPortfolioPerformance && (
+                <PortfolioPerformanceModal
+                    performances={performance.summary.annualPerformances}
+                    onClose={() => setShowPortfolioPerformance(false)}
+                />
+            )}
         </div>
     );
-};
+});

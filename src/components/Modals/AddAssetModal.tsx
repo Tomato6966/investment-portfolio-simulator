@@ -4,13 +4,14 @@ import toast from "react-hot-toast";
 import { useDebouncedCallback } from "use-debounce";
 
 import { usePortfolioSelector } from "../../hooks/usePortfolio";
-import { getHistoricalData, searchAssets } from "../../services/yahooFinanceService";
+import { EQUITY_TYPES, getHistoricalData, searchAssets } from "../../services/yahooFinanceService";
 import { Asset } from "../../types";
 
 export default function AddAssetModal({ onClose }: { onClose: () => void }) {
     const [ search, setSearch ] = useState('');
     const [ searchResults, setSearchResults ] = useState<Asset[]>([]);
     const [ loading, setLoading ] = useState<null | "searching" | "adding">(null);
+    const [ equityType, setEquityType ] = useState<string>(EQUITY_TYPES.all);
     const { addAsset, dateRange, assets } = usePortfolioSelector((state) => ({
         addAsset: state.addAsset,
         dateRange: state.dateRange,
@@ -22,7 +23,7 @@ export default function AddAssetModal({ onClose }: { onClose: () => void }) {
         setLoading("searching");
         setTimeout(async () => {
             try {
-                const results = await searchAssets(query);
+                const results = await searchAssets(query, equityType);
                 setSearchResults(results.filter((result) => !assets.some((asset) => asset.symbol === result.symbol)));
             } catch (error) {
                 console.error('Error searching assets:', error);
@@ -44,7 +45,7 @@ export default function AddAssetModal({ onClose }: { onClose: () => void }) {
                     dateRange.endDate
                 );
 
-                if (historicalData.length === 0) {
+                if (historicalData.size === 0) {
                     toast.error(`No historical data available for ${asset.name}`);
                     return;
                 }
@@ -72,9 +73,17 @@ export default function AddAssetModal({ onClose }: { onClose: () => void }) {
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-lg">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold dark:text-gray-200">Add Asset</h2>
-                    <button onClick={onClose} className="p-2">
-                        <X className="w-6 h-6 dark:text-gray-200" />
-                    </button>
+                    <div className="flex items-center gap-2 justify-end">
+                        <label className="text-sm font-medium text-gray-800/30 dark:text-gray-200/30">Asset Type:</label>
+                        <select value={equityType} onChange={(e) => setEquityType(e.target.value)} className="w-[30%] p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300">
+                            {Object.entries(EQUITY_TYPES).map(([key, value]) => (
+                                <option key={key} value={value}>{key.charAt(0).toUpperCase() + key.slice(1)}</option>
+                            ))}
+                        </select>
+                        <button onClick={onClose} className="p-2">
+                            <X className="w-6 h-6 dark:text-gray-200" />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="relative mb-4">
@@ -105,7 +114,15 @@ export default function AddAssetModal({ onClose }: { onClose: () => void }) {
                                 className="w-full text-left p-3 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-900 rounded border-b dark:border-slate-700 border-gray-300"
                                 onClick={() => handleAssetSelect(result)}
                             >
-                                <div className="font-medium">{result.name}</div>
+                                <div className="font-medium flex justify-between">
+                                    <span>{result.name}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className={!result.priceChangePercent?.includes("-") ? "text-green-500/75" : "text-red-500/75"}>
+                                            {!result.priceChangePercent?.includes("-") && "+"}{result.priceChangePercent}
+                                        </span>
+                                        {result.price}
+                                    </div>
+                                </div>
                                 <div className="text-sm text-gray-600">
                                     Ticker-Symbol: {result.symbol} | Type: {result.quoteType?.toUpperCase() || "Unknown"} | Rank: #{result.rank || "-"}
                                 </div>

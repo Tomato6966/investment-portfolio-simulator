@@ -3,16 +3,14 @@ export interface Asset {
     isin: string;
     name: string;
     quoteType: string;
+    price?: string;
+    priceChange?: string;
+    priceChangePercent?: string;
     rank: string;
     wkn: string;
     symbol: string;
-    historicalData: HistoricalData[];
+    historicalData: Map<string, number>;
     investments: Investment[];
-}
-
-export interface HistoricalData {
-    date: Date;
-    price: number;
 }
 
 export interface Investment {
@@ -67,12 +65,14 @@ export interface PortfolioPerformance {
     summary: {
         totalInvested: number;
         currentValue: number;
+        annualPerformancesPerAsset: Map<string, { year: number; percentage: number; price: number }[]>;
         performancePercentage: number;
         performancePerAnnoPerformance: number;
         ttworValue: number;
         ttworPercentage: number;
         bestPerformancePerAnno: { percentage: number, year: number }[];
         worstPerformancePerAnno: { percentage: number, year: number }[];
+        annualPerformances: { year: number; percentage: number; }[];
     };
 }
 

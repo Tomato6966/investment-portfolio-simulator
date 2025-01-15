@@ -39,7 +39,7 @@ https://github.com/user-attachments/assets/4507e102-8dfb-4614-b2ba-938e20e3d97b
     - *Export the entire portfolio Overview to a PDF, including Future Projections of 10, 15, 20, 30 and 40 years*
 - 📄 Export to CSV Tables
     - *Export all available tables to CSV*
-
+- See the asset performance p.a. as well as of the portfolio
 
 ## Tech Stack
 
@@ -71,8 +71,14 @@ https://github.com/user-attachments/assets/4507e102-8dfb-4614-b2ba-938e20e3d97b
 ![PDF Export - Page-1](./docs/analysis-page-1.png)
 ![PDF Export - Page-2](./docs/analysis-page-2.png)
 ![Scenario Projection](./docs/scenario-projection.png)
-
+![Portfolio Performance Modal](./docs/portfolioPerformance.png)
+![Asset Performance Modal](./docs/assetPerformance.png)
+![Asset Performance Cards](./docs/assetPerformanceCards.png)
+![Asset Modal White Mode](.docs/assetPerformanceWhiteMode.png)
 
 ### Credits:
 
 > Thanks to [yahoofinance](https://finance.yahoo.com/) for the stock data.
+
+
+- **15.01.2025:** Increased Performance of entire Site by utilizing Maps

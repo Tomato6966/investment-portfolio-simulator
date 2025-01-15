@@ -23,7 +23,6 @@ export default function MainContent({ isAddingAsset, setIsAddingAsset }: { isAdd
                     </Suspense>
                 </div>
             </div>
-
             <Suspense fallback={<LoadingPlaceholder className="h-[500px]" />}>
                 <PortfolioTable />
             </Suspense>

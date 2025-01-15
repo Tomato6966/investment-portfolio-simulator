@@ -1,6 +1,8 @@
 import type { Asset, YahooSearchResponse, YahooChartResult } from "../types";
 import toast from "react-hot-toast";
 
+import { formatDateToISO } from "../utils/formatters";
+
 // this is only needed when hosted staticly without a proxy server or smt
 // TODO change it to use the proxy server
 const isDev = import.meta.env.DEV;
@@ -8,12 +10,24 @@ const CORS_PROXY = 'https://corsproxy.io/?url=';
 const YAHOO_API = 'https://query1.finance.yahoo.com';
 const API_BASE = isDev ? '/yahoo' : `${CORS_PROXY}${encodeURIComponent(YAHOO_API)}`;
 
-export const searchAssets = async (query: string): Promise<Asset[]> => {
+export const EQUITY_TYPES = {
+    all: "etf,equity,mutualfund,index,currency,cryptocurrency,future",
+    ETF: "etf",
+    Stock: "equity",
+    "Etf or Stock": "etf,equity",
+    Mutualfund: "mutualfund",
+    Index: "index",
+    Currency: "currency",
+    Cryptocurrency: "cryptocurrency",
+    Future: "future",
+};
+
+export const searchAssets = async (query: string, equityType: string): Promise<Asset[]> => {
     try {
         const params = new URLSearchParams({
             query,
             lang: 'en-US',
-            type: 'equity,mutualfund,etf,index,currency,cryptocurrency', // allow searching for everything except: future
+            type: equityType,
             longName: 'true',
         });
 
@@ -32,7 +46,7 @@ export const searchAssets = async (query: string): Promise<Asset[]> => {
         }
 
         return data.finance.result[0].documents
-            .filter(quote => quote.quoteType === 'equity' || quote.quoteType === 'etf')
+            .filter(quote => equityType.split(",").map(v => v.toLowerCase()).includes(quote.quoteType.toLowerCase()))
             .map((quote) => ({
                 id: quote.symbol,
                 isin: '', // not provided by Yahoo Finance API
@@ -41,11 +55,11 @@ export const searchAssets = async (query: string): Promise<Asset[]> => {
                 rank: quote.rank,
                 symbol: quote.symbol,
                 quoteType: quote.quoteType,
-                price: quote.regularMarketPrice.raw,
-                priceChange: quote.regularMarketChange.raw,
-                priceChangePercent: quote.regularMarketPercentChange.raw,
+                price: quote.regularMarketPrice.fmt,
+                priceChange: quote.regularMarketChange.fmt,
+                priceChangePercent: quote.regularMarketPercentChange.fmt,
                 exchange: quote.exchange,
-                historicalData: [],
+                historicalData: new Map(),
                 investments: [],
             }));
     } catch (error) {
@@ -75,15 +89,12 @@ export const getHistoricalData = async (symbol: string, startDate: Date, endDate
         const quotes = indicators.quote[0];
 
         return {
-            historicalData: timestamp.map((time: number, index: number) => ({
-                date: new Date(time * 1000),
-                price: quotes.close[index],
-            })),
+            historicalData: new Map(timestamp.map((time: number, index: number) => [formatDateToISO(new Date(time * 1000)), quotes.close[index]])),
             longName: meta.longName
         }
     } catch (error) {
         console.error('Error fetching historical data:', error);
         toast.error(`Failed to fetch historical data for ${symbol}. Please try again later.`);
-        return { historicalData: [], longName: '' };
+        return { historicalData: new Map<string, number>(), longName: '' };
     }
 };

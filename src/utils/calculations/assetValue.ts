@@ -1,9 +1,8 @@
-import {
-	addDays, addMonths, addWeeks, addYears, isAfter, isBefore, isSameDay, setDate
-} from "date-fns";
+import { addDays, addMonths, addWeeks, addYears, isAfter, isSameDay, setDate } from "date-fns";
+
+import { formatDateToISO } from "../formatters";
 
 import type { Asset, Investment, PeriodicSettings } from "../../types";
-
 export const calculateAssetValueAtDate = (asset: Asset, date: Date, currentPrice: number) => {
     let totalShares = 0;
 
@@ -14,23 +13,21 @@ export const calculateAssetValueAtDate = (asset: Asset, date: Date, currentPrice
         if (isAfter(invDate, date) || isSameDay(invDate, date)) continue;
 
         // Find price at investment date
-        const investmentPrice = asset.historicalData.find(
-            (data) => isSameDay(data.date, invDate)
-        )?.price || 0;
+        let investmentPrice = asset.historicalData.get(formatDateToISO(invDate)) || 0;
+        // if no investment price found, try to find the nearest price
+        if(!investmentPrice) {
+            let previousDate = invDate;
+            let afterDate = invDate;
+            while(!investmentPrice) {
+                previousDate = addDays(previousDate, -1);
+                afterDate = addDays(afterDate, 1);
+                investmentPrice = asset.historicalData.get(formatDateToISO(previousDate)) || asset.historicalData.get(formatDateToISO(afterDate)) || 0;
+            }
+        }
 
-        // if no investment price found, use the previous price
-        const previousInvestmentPrice = investmentPrice || asset.historicalData
-            .filter(({ date }) => isAfter(new Date(date), invDate) || isSameDay(new Date(date), invDate))
-            .find(({ price }) => price !== 0)?.price || 0;
-
-        const investmentPriceToUse = investmentPrice || previousInvestmentPrice || asset.historicalData
-            .filter(({ date }) => isBefore(new Date(date), invDate) || isSameDay(new Date(date), invDate))
-            .reverse()
-            .find(({ price }) => price !== 0)?.price || 0;
-
-        if (investmentPriceToUse > 0) {
-            totalShares += investment.amount / investmentPriceToUse;
-            buyIns.push(investmentPriceToUse);
+        if (investmentPrice > 0) {
+            totalShares += investment.amount / investmentPrice;
+            buyIns.push(investmentPrice);
         }
     }
 

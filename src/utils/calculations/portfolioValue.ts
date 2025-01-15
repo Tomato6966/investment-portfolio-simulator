@@ -1,8 +1,14 @@
 import { addDays, isAfter, isBefore, isSameDay } from "date-fns";
 
+import { formatDateToISO } from "../formatters";
 import { calculateAssetValueAtDate } from "./assetValue";
 
 import type { Asset, DateRange, DayData } from "../../types";
+interface WeightedPercent {
+    percent: number;
+    weight: number;
+}
+
 
 export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) => {
     const { startDate, endDate } = dateRange;
@@ -22,24 +28,16 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
             assets: {},
         };
 
-        interface WeightedPercent {
-            percent: number;
-            weight: number;
-        }
         const weightedPercents: WeightedPercent[] = [];
 
         for (const asset of assets) {
             // calculate the invested kapital
             for (const investment of asset.investments) {
-                if (!isAfter(new Date(investment.date!), currentDate) && !isSameDay(new Date(investment.date!), currentDate)) {
-                    dayData.invested += investment.amount;
-                }
+                const invDate = new Date(investment.date!);
+                if (!isAfter(invDate, currentDate) && !isSameDay(invDate, currentDate)) dayData.invested += investment.amount;
             }
 
-            // Get historical price for the asset
-            const currentValueOfAsset = asset.historicalData.find(
-                (data) => isSameDay(data.date, dayData.date)
-            )?.price || beforeValue[asset.id];
+            const currentValueOfAsset = asset.historicalData.get(formatDateToISO(dayData.date)) || beforeValue[asset.id];
             beforeValue[asset.id] = currentValueOfAsset;
 
             if (currentValueOfAsset !== undefined) {
@@ -52,9 +50,10 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
                 dayData.total += investedValue || 0;
                 dayData.assets[asset.id] = currentValueOfAsset;
 
-                const performancePercentage = investedValue > 0
-                    ? ((currentValueOfAsset - avgBuyIn) / avgBuyIn) * 100
-                    : 0;
+                let performancePercentage = 0;
+                if (investedValue > 0) {
+                    performancePercentage = ((currentValueOfAsset - avgBuyIn) / avgBuyIn) * 100;
+                }
 
                 weightedPercents.push({
                     percent: performancePercentage,
@@ -75,9 +74,11 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
         const totalInvested = dayData.invested; // Total invested amount for the day
         const totalCurrentValue = dayData.total; // Total current value for the day
 
-        dayData.percentageChange = totalInvested > 0 && totalCurrentValue > 0
-            ? ((totalCurrentValue - totalInvested) / totalInvested) * 100
-            : 0;
+        if (totalInvested > 0 && totalCurrentValue > 0) {
+            dayData.percentageChange = ((totalCurrentValue - totalInvested) / totalInvested) * 100;
+        } else {
+            dayData.percentageChange = 0;
+        }
 
 
         currentDate = addDays(currentDate, 1);
@@ -86,6 +87,10 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
 
     // Filter out days with incomplete asset data
     return data.filter(
-        (dayData) => !Object.values(dayData.assets).some((value) => value === 0)
+        (dayData) => {
+            const vals = Object.values(dayData.assets);
+            if (!vals.length) return false;
+            return !vals.some((value) => value === 0);
+        }
     );
 };
