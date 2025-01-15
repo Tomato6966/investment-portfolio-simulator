@@ -74,7 +74,7 @@ https://github.com/user-attachments/assets/4507e102-8dfb-4614-b2ba-938e20e3d97b
 ![Portfolio Performance Modal](./docs/portfolioPerformance.png)
 ![Asset Performance Modal](./docs/assetPerformance.png)
 ![Asset Performance Cards](./docs/assetPerformanceCards.png)
-![Asset Modal White Mode](.docs/assetPerformanceWhiteMode.png)
+![Asset Modal White Mode](./docs/assetPerformanceWhiteMode.png)
 
 ### Credits:
 
