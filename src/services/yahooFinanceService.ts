@@ -13,7 +13,7 @@ export const searchAssets = async (query: string): Promise<Asset[]> => {
         const params = new URLSearchParams({
             query,
             lang: 'en-US',
-            type: 'equity,etf',
+            type: 'equity,mutualfund,etf,index,currency,cryptocurrency', // allow searching for everything except: future
             longName: 'true',
         });
 
