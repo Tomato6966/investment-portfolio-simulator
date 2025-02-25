@@ -8,7 +8,9 @@ import App from "./App.tsx";
 import { DarkModeProvider } from "./providers/DarkModeProvider.tsx";
 
 // Let App handle the route definitions
-const router = createBrowserRouter(App);
+const router = createBrowserRouter(App, {
+    basename: "/investment-portfolio-simulator"
+});
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
