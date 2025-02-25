@@ -24,6 +24,9 @@ export const EQUITY_TYPES = {
 
 export const searchAssets = async (query: string, equityType: string): Promise<Asset[]> => {
     try {
+        // Log input parameters for debugging
+        console.log(`Searching for "${query}" with type "${equityType}"`);
+
         const params = new URLSearchParams({
             query,
             lang: 'en-US',
@@ -32,21 +35,37 @@ export const searchAssets = async (query: string, equityType: string): Promise<A
         });
 
         const url = `${API_BASE}/v1/finance/lookup${!isDev ? encodeURIComponent(`?${params}`) : `?${params}`}`;
+        console.log(`Request URL: ${url}`);
+
         const response = await fetch(url);
-        if (!response.ok) throw new Error('Network response was not ok');
+        if (!response.ok) {
+            console.error(`Network error: ${response.status} ${response.statusText}`);
+            throw new Error('Network response was not ok');
+        }
 
         const data = await response.json() as YahooSearchResponse;
+        console.log("API response:", data);
 
         if (data.finance.error) {
+            console.error(`API error: ${data.finance.error}`);
             throw new Error(data.finance.error);
         }
 
         if (!data.finance.result?.[0]?.documents) {
+            console.log("No results found");
             return [];
         }
 
+        const equityTypes = equityType.split(",").map(v => v.toLowerCase());
+
         return data.finance.result[0].documents
-            .filter(quote => equityType.split(",").map(v => v.toLowerCase()).includes(quote.quoteType.toLowerCase()))
+            .filter(quote => {
+                const matches = equityTypes.includes(quote.quoteType.toLowerCase());
+                if (!matches) {
+                    console.log(`Filtering out ${quote.symbol} (${quote.quoteType}) as it doesn't match ${equityTypes.join(', ')}`);
+                }
+                return matches;
+            })
             .map((quote) => ({
                 id: quote.symbol,
                 isin: '', // not provided by Yahoo Finance API

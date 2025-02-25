@@ -1,5 +1,6 @@
-import { Heart, Moon, Plus, Sun } from "lucide-react";
+import { BarChart2, Heart, Moon, Plus, Sun } from "lucide-react";
 import React from "react";
+import { Link } from "react-router-dom";
 
 import { useDarkMode } from "../../hooks/useDarkMode";
 
@@ -36,6 +37,13 @@ export const AppShell = ({ children, onAddAsset }: AppShellProps) => {
                                 <Plus className="w-5 h-5" />
                                 Add Asset
                             </button>
+                            <Link
+                                to="/explore"
+                                className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                            >
+                                <BarChart2 className="w-5 h-5" />
+                                Stock Explorer
+                            </Link>
                         </div>
                     </div>
                     {children}

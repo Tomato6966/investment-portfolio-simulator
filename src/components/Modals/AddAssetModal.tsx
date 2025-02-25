@@ -75,7 +75,10 @@ export default function AddAssetModal({ onClose }: { onClose: () => void }) {
                     <h2 className="text-xl font-bold dark:text-gray-200">Add Asset</h2>
                     <div className="flex items-center gap-2 justify-end">
                         <label className="text-sm font-medium text-gray-800/30 dark:text-gray-200/30">Asset Type:</label>
-                        <select value={equityType} onChange={(e) => setEquityType(e.target.value)} className="w-[30%] p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300">
+                        <select value={equityType} onChange={(e) => {
+                            setEquityType(e.target.value);
+                            debouncedSearch(search);
+                        }} className="w-[30%] p-2 border rounded dark:bg-slate-800 dark:border-slate-700 dark:outline-none dark:text-gray-300">
                             {Object.entries(EQUITY_TYPES).map(([key, value]) => (
                                 <option key={key} value={value}>{key.charAt(0).toUpperCase() + key.slice(1)}</option>
                             ))}

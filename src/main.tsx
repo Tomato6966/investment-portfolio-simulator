@@ -1,15 +1,19 @@
 import "./index.css";
 
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import App from "./App.tsx";
 import { DarkModeProvider } from "./providers/DarkModeProvider.tsx";
 
-createRoot(document.getElementById('root')!).render(
-    <StrictMode>
+// Let App handle the route definitions
+const router = createBrowserRouter(App);
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
         <DarkModeProvider>
-            <App />
+            <RouterProvider router={router} />
         </DarkModeProvider>
-    </StrictMode>
+    </React.StrictMode>
 );

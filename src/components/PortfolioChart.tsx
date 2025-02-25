@@ -17,11 +17,12 @@ export default function PortfolioChart() {
     const [ hiddenAssets, setHiddenAssets ] = useState<Set<string>>(new Set());
     const { isDarkMode } = useDarkMode();
 
-    const { assets, dateRange, updateDateRange, updateAssetHistoricalData } = usePortfolioSelector((state) => ({
+    const { assets, dateRange, updateDateRange, updateAssetHistoricalData, removeAsset } = usePortfolioSelector((state) => ({
         assets: state.assets,
         dateRange: state.dateRange,
         updateDateRange: state.updateDateRange,
         updateAssetHistoricalData: state.updateAssetHistoricalData,
+        removeAsset: state.removeAsset,
     }));
 
     const fetchHistoricalData = useCallback(
@@ -62,7 +63,22 @@ export default function PortfolioChart() {
         return investedKapitals;
     }, [assets]);
 
-    // Calculate percentage changes for each asset
+    // Compute the initial price for each asset as the first available value (instead of using data[0])
+    const initialPrices = useMemo(() => {
+        const prices: Record<string, number> = {};
+        assets.forEach(asset => {
+            for (let i = 0; i < data.length; i++) {
+                const price = data[i].assets[asset.id];
+                if (price != null) { // check if data exists
+                    prices[asset.id] = price;
+                    break;
+                }
+            }
+        });
+        return prices;
+    }, [assets, data]);
+
+    // Calculate percentage changes for each asset using the first available price from initialPrices
     const processedData = useMemo(() => data.map(point => {
         const processed: { date: string, total: number, invested: number, percentageChange: number, ttwor: number, ttwor_percent: number, [key: string]: number | string } = {
             date: format(point.date, 'yyyy-MM-dd'),
@@ -74,7 +90,7 @@ export default function PortfolioChart() {
         };
 
         for (const asset of assets) {
-            const initialPrice = data[0].assets[asset.id];
+            const initialPrice = initialPrices[asset.id]; // use the newly computed initial price
             const currentPrice = point.assets[asset.id];
             if (initialPrice && currentPrice) {
                 processed[`${asset.id}_price`] = currentPrice;
@@ -85,11 +101,8 @@ export default function PortfolioChart() {
         }
 
         processed.ttwor_percent = (processed.ttwor - Object.values(allAssetsInvestedKapitals).reduce((acc, curr) => acc + curr, 0)) / Object.values(allAssetsInvestedKapitals).reduce((acc, curr) => acc + curr, 0) * 100;
-
-
-        // add a processed["ttwor"] ttwor is what if you invested all of the kapital of all assets at the start of the period
         return processed;
-    }), [data, assets, allAssetsInvestedKapitals]);
+    }), [data, assets, allAssetsInvestedKapitals, initialPrices]);
 
     const toggleAsset = useCallback((assetId: string) => {
         const newHiddenAssets = new Set(hiddenAssets);
@@ -117,9 +130,11 @@ export default function PortfolioChart() {
         setRenderKey(prevKey => prevKey + 1);
     }, []);
 
+    console.log(processedData);
+    console.log("TEST")
     if (isFullscreen) {
         return (
-            <div className="fixed inset-0 bg-white dark:bg-slate-800 z-50">
+            <div className="fixed inset-0 bg-white dark:bg-slate-800 z-50 overflow-y-auto">
                 <div className="flex justify-between items-center mb-4 p-5">
                     <h2 className="text-xl font-bold dark:text-gray-300">Portfolio Chart</h2>
                     <button
@@ -144,6 +159,7 @@ export default function PortfolioChart() {
                     assetColors={assetColors}
                     toggleAsset={toggleAsset}
                     toggleAllAssets={toggleAllAssets}
+                    removeAsset={removeAsset}
                 />
             </div>
         );
@@ -166,6 +182,7 @@ export default function PortfolioChart() {
                 assetColors={assetColors}
                 toggleAsset={toggleAsset}
                 toggleAllAssets={toggleAllAssets}
+                removeAsset={removeAsset}
             />
         </div>
     );

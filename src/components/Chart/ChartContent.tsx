@@ -1,6 +1,5 @@
 import { format } from "date-fns";
 import { Maximize2, RefreshCcw } from "lucide-react";
-import { memo } from "react";
 import {
 	CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis
 } from "recharts";
@@ -24,9 +23,10 @@ interface ChartContentProps {
     assetColors: Record<string, string>;
     toggleAsset: (assetId: string) => void;
     toggleAllAssets: () => void;
+    removeAsset?: (assetId: string) => void;
 }
 
-export const ChartContent = memo(({
+export const ChartContent = ({
     dateRange,
     handleUpdateDateRange,
     handleReRender,
@@ -40,7 +40,8 @@ export const ChartContent = memo(({
     assets,
     assetColors,
     toggleAsset,
-    toggleAllAssets
+    toggleAllAssets,
+    removeAsset
 }: ChartContentProps) => (
     <>
         <div className="flex justify-between items-center mb-4 p-5">
@@ -118,6 +119,7 @@ export const ChartContent = memo(({
                         hiddenAssets={hiddenAssets}
                         toggleAsset={toggleAsset}
                         toggleAllAssets={toggleAllAssets}
+                        removeAsset={removeAsset}
                     />} />
                     <Line
                         type="monotone"
@@ -152,13 +154,14 @@ export const ChartContent = memo(({
                     {assets.map((asset) => (
                         <Line
                             key={asset.id}
-                            type="monotone"
+                            type="basis"
                             hide={hideAssets || hiddenAssets.has(asset.id)}
                             dataKey={`${asset.id}_percent`}
                             name={`${asset.name} (%)`}
                             stroke={assetColors[asset.id] || "red"}
                             dot={false}
                             yAxisId="right"
+                            connectNulls={true}
                         />
                     ))}
                     <Line
@@ -181,4 +184,4 @@ export const ChartContent = memo(({
             **Note: The % is based on daily weighted average data, thus the percentages might alter slightly.
         </p>
     </>
-));
+);

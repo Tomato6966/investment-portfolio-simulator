@@ -3,11 +3,12 @@ import { Toaster } from "react-hot-toast";
 
 import { AppShell } from "./components/Landing/AppShell";
 import { LoadingPlaceholder } from "./components/utils/LoadingPlaceholder";
+import StockExplorer from "./pages/StockExplorer";
 import { PortfolioProvider } from "./providers/PortfolioProvider";
 
 const MainContent = lazy(() => import("./components/Landing/MainContent"));
 
-export default function App() {
+function Root() {
     const [isAddingAsset, setIsAddingAsset] = useState(false);
 
     return (
@@ -24,3 +25,15 @@ export default function App() {
         </PortfolioProvider>
     );
 }
+
+// Export the routes configuration that will be used in main.tsx
+export default [
+    {
+        path: '/',
+        element: <Root />
+    },
+    {
+        path: '/explore',
+        element: <StockExplorer />
+    }
+];
