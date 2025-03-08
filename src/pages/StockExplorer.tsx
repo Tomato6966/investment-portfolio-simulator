@@ -1,12 +1,11 @@
 import { format, subYears, subMonths } from "date-fns";
 import { ChevronDown, ChevronLeft, Circle, Filter, Heart, Plus, RefreshCw, Search, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import toast from "react-hot-toast";
 import { Link, useSearchParams } from "react-router-dom";
 import {
     CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis
 } from "recharts";
-
 import { useDarkMode } from "../hooks/useDarkMode";
 import { EQUITY_TYPES, getHistoricalData, searchAssets } from "../services/yahooFinanceService";
 import { Asset } from "../types";
@@ -15,6 +14,7 @@ import { intervalBasedOnDateRange } from "../utils/calculations/intervalBasedOnD
 import { useLivePrice } from '../hooks/useLivePrice';
 import { SortableTable } from '../components/SortableTable';
 import { SavingsPlanSimulator } from '../components/SavingsPlanSimulator';
+import { useDebounce } from "use-debounce";
 
 // Extended time period options
 const TIME_PERIODS: { [key: string]: string } = {
@@ -65,6 +65,10 @@ const StockExplorer = () => {
         startDate: subYears(new Date(), 1),
         endDate: new Date()
     });
+    const [pendingCustomRange, setPendingCustomRange] = useState({
+        startDate: subYears(new Date(), 1),
+        endDate: new Date()
+    });
     const [stockData, setStockData] = useState<any[]>([]);
     const [stockColors, setStockColors] = useState<Record<string, string>>({});
     const { isDarkMode } = useDarkMode();
@@ -76,18 +80,26 @@ const StockExplorer = () => {
         monthlyAmount: number;
         projectionYears: number;
         allocations: string;
+        customStartDate: string;
+        customEndDate: string;
     }>({
         stocks: [],
         period: '',
         monthlyAmount: 0,
         projectionYears: 0,
-        allocations: ''
+        allocations: '',
+        customStartDate: '',
+        customEndDate: ''
     });
     const [savingsPlanParams, setSavingsPlanParams] = useState({
         monthlyAmount: 1000,
         years: 5,
         allocations: {} as Record<string, number>
     });
+
+    const [setDebouncedSearchParams] = useDebounce((params: Record<string, string>) => {
+        setSearchParams(params);
+    }, 500);
 
     // On mount: Read URL query params and update states if found.
     useEffect(() => {
@@ -97,7 +109,33 @@ const StockExplorer = () => {
         const periodParam = searchParams.get("period");
         if (periodParam && Object.keys(TIME_PERIODS).includes(periodParam)) {
             setTimePeriod(periodParam as keyof typeof TIME_PERIODS);
-            updateTimePeriod(periodParam as keyof typeof TIME_PERIODS);
+            
+            // If it's a custom period, look for the date parameters
+            if (periodParam === "CUSTOM") {
+                const startDateParam = searchParams.get("startDate");
+                const endDateParam = searchParams.get("endDate");
+                
+                if (startDateParam && endDateParam) {
+                    const startDate = new Date(startDateParam);
+                    const endDate = new Date(endDateParam);
+                    
+                    // Validate dates
+                    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+                        const newCustomRange = { startDate, endDate };
+                        setCustomDateRange(newCustomRange);
+                        setPendingCustomRange(newCustomRange);
+                        setDateRange(newCustomRange);
+                    } else {
+                        // Fall back to default
+                        updateTimePeriod(periodParam as keyof typeof TIME_PERIODS);
+                    }
+                } else {
+                    // Fall back to default custom range
+                    updateTimePeriod(periodParam as keyof typeof TIME_PERIODS);
+                }
+            } else {
+                updateTimePeriod(periodParam as keyof typeof TIME_PERIODS);
+            }
         }
         
         // Get savings plan params first so they're ready when stocks load
@@ -251,6 +289,12 @@ const StockExplorer = () => {
         }
         if (timePeriod) {
             params.period = timePeriod.toString();
+            
+            // Add custom date range params if using custom period
+            if (timePeriod === "CUSTOM") {
+                params.startDate = format(customDateRange.startDate, 'yyyy-MM-dd');
+                params.endDate = format(customDateRange.endDate, 'yyyy-MM-dd');
+            }
         }
         if (savingsPlanParams.monthlyAmount > 0) {
             params.monthlyAmount = savingsPlanParams.monthlyAmount.toString();
@@ -273,9 +317,16 @@ const StockExplorer = () => {
         
         // Check if anything actually changed before updating URL
         const prevParams = previousParamsRef.current;
+        const hasCustomDateChanged = 
+            timePeriod === "CUSTOM" && (
+                format(customDateRange.startDate, 'yyyy-MM-dd') !== prevParams.customStartDate ||
+                format(customDateRange.endDate, 'yyyy-MM-dd') !== prevParams.customEndDate
+            );
+            
         const hasChanged = 
             stocksParam !== prevParams.stocks.join(",") ||
             timePeriod.toString() !== prevParams.period ||
+            hasCustomDateChanged ||
             savingsPlanParams.monthlyAmount !== prevParams.monthlyAmount ||
             savingsPlanParams.years !== prevParams.projectionYears ||
             allocationsParam !== prevParams.allocations;
@@ -288,13 +339,23 @@ const StockExplorer = () => {
                 period: timePeriod.toString(),
                 monthlyAmount: savingsPlanParams.monthlyAmount,
                 projectionYears: savingsPlanParams.years,
-                allocations: allocationsParam
+                allocations: allocationsParam,
+                customStartDate: timePeriod === "CUSTOM" ? format(customDateRange.startDate, 'yyyy-MM-dd') : '',
+                customEndDate: timePeriod === "CUSTOM" ? format(customDateRange.endDate, 'yyyy-MM-dd') : ''
             };
             
-            // Update the URL params
-            setSearchParams(params);
+            // Use debounced version for savings plan changes only
+            if (stocksParam === prevParams.stocks.join(",") && 
+                timePeriod.toString() === prevParams.period && 
+                !hasCustomDateChanged) {
+                // Only savings plan params changed - use debounced update
+                setDebouncedSearchParams(params);
+            } else {
+                // Stock selection or time period changed - immediate update
+                setSearchParams(params);
+            }
         }
-    }, [selectedStocks, timePeriod, savingsPlanParams, setSearchParams]);
+    }, [selectedStocks, timePeriod, customDateRange, savingsPlanParams, setSearchParams, setDebouncedSearchParams]);
 
     // Handle search
     const handleSearch = useCallback(async () => {
@@ -637,15 +698,6 @@ const StockExplorer = () => {
         // Don't include refreshStockData in dependencies
     }, [selectedStocks.length, dateRange]);
 
-    // Update custom date range
-    const handleCustomDateChange = useCallback((start: Date, end: Date) => {
-        const newRange = { startDate: start, endDate: end };
-        setCustomDateRange(newRange);
-        if (timePeriod === "CUSTOM") {
-            setDateRange(newRange);
-        }
-    }, [timePeriod]);
-
     // Ensure processStockData is called immediately when selectedStocks changes
     useEffect(() => {
         if (selectedStocks.length > 0) {
@@ -654,38 +706,108 @@ const StockExplorer = () => {
         }
     }, [selectedStocks, processStockData]);
 
-    const LivePriceCell = ({ symbol }: { symbol: string }) => {
-        const { livePrice, isLoading, lastUpdated, lastPrice, currency } = useLivePrice({
-            symbol,
-            refreshInterval: 60000, // 1 minute
-            enabled: true
-        });
-
-        return (
-            <div>
-                {isLoading ? (
-                    <span className="inline-block w-4 h-4 border-2 border-t-transparent border-blue-500 rounded-full animate-spin"></span>
-                ) : livePrice ? (
-                    <div>
-                        <div className="flex p-2 text-right justify-end items-center gap-1">
-                            <Circle size={16} className="text-green-500" />
-                            <div>{formatCurrency(livePrice, currency)}</div>
-                            <div className="text-xs text-gray-500">
-                                {lastUpdated ? `Updated: ${format(lastUpdated, 'HH:mm:ss')}` : ''}
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="flex p-2 text-right justify-end items-center gap-1">
-                        <Circle size={16} className="text-red-500" /> Market Closed, last Price: {formatCurrency(lastPrice, currency)}
-                    </div>
-                )}
-            </div>
-        );
+    // Handle pending custom date change
+    const handlePendingCustomDateChange = (input: Date | string, isStartDate: boolean) => {
+        try {
+            // Make sure we have a valid date
+            const newDate = input instanceof Date ? input : new Date(input);
+            
+            // Check if the date is valid
+            if (isNaN(newDate.getTime())) {
+                // Don't update if invalid date
+                return;
+            }
+            
+            // Update the appropriate date in the pending range
+            if (isStartDate) {
+                setPendingCustomRange(prev => ({ ...prev, startDate: newDate }));
+            } else {
+                setPendingCustomRange(prev => ({ ...prev, endDate: newDate }));
+            }
+        } catch (error) {
+            console.error("Invalid date input:", error);
+            // Don't update state if there's an error
+        }
     };
 
-    // Define column configurations for the sortable table
-    const tableColumns = [
+    // Apply custom date range
+    const applyCustomDateRange = () => {
+        // Validate dates
+        if (isNaN(pendingCustomRange.startDate.getTime()) || isNaN(pendingCustomRange.endDate.getTime())) {
+            toast.error("Invalid date format");
+            return;
+        }
+        
+        if (pendingCustomRange.startDate > pendingCustomRange.endDate) {
+            toast.error("Start date cannot be after end date");
+            return;
+        }
+        
+        setCustomDateRange(pendingCustomRange);
+        setDateRange(pendingCustomRange);
+        
+        // Make sure time period is set to CUSTOM
+        if (timePeriod !== "CUSTOM") {
+            setTimePeriod("CUSTOM");
+        }
+    };
+
+    // Memoize table data calculation to prevent unnecessary recalculations
+    const tableData = useMemo(() => {
+        return selectedStocks.map(stock => {
+            const metrics = calculatePerformanceMetrics(stock);
+            const historicalData = Array.from(stock.historicalData.entries());
+            const currentPrice = historicalData.length > 0
+                ? historicalData[historicalData.length - 1][1]
+                : 0;
+
+            return {
+                id: stock.id,
+                name: stock.name,
+                symbol: stock.symbol,
+                total: metrics.total,
+                annualized: metrics.annualized,
+                currentPrice,
+                currency: stock.currency
+            };
+        });
+    }, [selectedStocks, calculatePerformanceMetrics]);
+
+    // Memoize the LivePriceCell component to prevent unnecessary re-renders
+    const MemoizedLivePriceCell = useMemo(() => {
+        return ({ symbol }: { symbol: string }) => {
+            const { livePrice, isLoading, lastUpdated, lastPrice, currency } = useLivePrice({
+                symbol,
+                refreshInterval: 60000, // 1 minute
+                enabled: true
+            });
+
+            return (
+                <div>
+                    {isLoading ? (
+                        <span className="inline-block w-4 h-4 border-2 border-t-transparent border-blue-500 rounded-full animate-spin"></span>
+                    ) : livePrice ? (
+                        <div>
+                            <div className="flex p-2 text-right justify-end items-center gap-1">
+                                <Circle size={16} className="text-green-500" />
+                                <div>{formatCurrency(livePrice, currency)}</div>
+                                <div className="text-xs text-gray-500">
+                                    {lastUpdated ? `Updated: ${format(lastUpdated, 'HH:mm:ss')}` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex p-2 text-right justify-end items-center gap-1">
+                            <Circle size={16} className="text-red-500" /> Market Closed, last Price: {formatCurrency(lastPrice, currency)}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+    }, []);
+
+    // Memoize column configurations for the sortable table
+    const tableColumns = useMemo(() => [
         {
             key: 'name',
             label: 'Stock',
@@ -719,28 +841,16 @@ const StockExplorer = () => {
             key: 'symbol',
             label: 'Live Price',
             sortable: false,
-            render: (value: string) => <LivePriceCell symbol={value} />
+            render: (value: string) => <MemoizedLivePriceCell symbol={value} />
         }
-    ];
+    ], [stockColors, MemoizedLivePriceCell]);
 
-    // Prepare data for the table
-    const tableData = selectedStocks.map(stock => {
-        const metrics = calculatePerformanceMetrics(stock);
-        const historicalData = Array.from(stock.historicalData.entries());
-        const currentPrice = historicalData.length > 0
-            ? historicalData[historicalData.length - 1][1]
-            : 0;
-
-        return {
-            id: stock.id,
-            name: stock.name,
-            symbol: stock.symbol,
-            total: metrics.total,
-            annualized: metrics.annualized,
-            currentPrice,
-            currency: stock.currency
-        };
-    });
+    // Memoize the SortableTable component to prevent unnecessary re-renders
+    const MemoizedSortableTable = useMemo(() => {
+        return (
+            <SortableTable data={tableData} columns={tableColumns} />
+        );
+    }, [tableData, tableColumns]);
 
     return (
         <div className="dark:bg-slate-900 min-h-screen w-full">
@@ -939,17 +1049,15 @@ const StockExplorer = () => {
 
                     {/* Custom date range selector (if CUSTOM is selected) */}
                     {timePeriod === "CUSTOM" && (
-                        <div className="flex gap-4 mt-4">
+                        <div className="flex flex-col md:flex-row gap-4 mt-4">
                             <div>
                                 <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
                                     Start Date
                                 </label>
                                 <input
                                     type="date"
-                                    value={format(customDateRange.startDate, 'yyyy-MM-dd')}
-                                    onChange={(e) =>
-                                        handleCustomDateChange(new Date(e.target.value), customDateRange.endDate)
-                                    }
+                                    value={format(pendingCustomRange.startDate, 'yyyy-MM-dd')}
+                                    onChange={(e) => handlePendingCustomDateChange(e.target.value, true)}
                                     className="border p-2 rounded dark:bg-slate-700 dark:text-white dark:border-slate-600"
                                 />
                             </div>
@@ -959,13 +1067,20 @@ const StockExplorer = () => {
                                 </label>
                                 <input
                                     type="date"
-                                    value={format(customDateRange.endDate, 'yyyy-MM-dd')}
-                                    onChange={(e) =>
-                                        handleCustomDateChange(customDateRange.startDate, new Date(e.target.value))
-                                    }
+                                    value={format(pendingCustomRange.endDate, 'yyyy-MM-dd')}
+                                    onChange={(e) => handlePendingCustomDateChange(e.target.value, false)}
                                     max={format(new Date(), 'yyyy-MM-dd')}
                                     className="border p-2 rounded dark:bg-slate-700 dark:text-white dark:border-slate-600"
                                 />
+                            </div>
+                            <div className="self-end mt-2 md:mt-0">
+                                <button
+                                    onClick={applyCustomDateRange}
+                                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+                                    disabled={loading || pendingCustomRange.startDate > pendingCustomRange.endDate || pendingCustomRange.startDate === pendingCustomRange.endDate || pendingCustomRange.startDate === dateRange.startDate && pendingCustomRange.endDate === dateRange.endDate}
+                                >
+                                    Apply Date Range
+                                </button>
                             </div>
                         </div>
                     )}
@@ -1033,7 +1148,7 @@ const StockExplorer = () => {
 
                         {/* Performance metrics table */}
                         <div className="overflow-x-auto">
-                            <SortableTable data={tableData} columns={tableColumns} />
+                            {MemoizedSortableTable}
                         </div>
                     </div>
                 )}

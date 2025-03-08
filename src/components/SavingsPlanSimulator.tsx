@@ -239,7 +239,7 @@ export const SavingsPlanSimulator = ({
           
           // Add some randomness to make the returns vary month to month
           const monthFactor = month % 12; // To create some seasonal variation
-          const randomFactor = 0.5 + Math.random(); // Between 0.5 and 1.5
+          const randomFactor = 1; // Between 0.5 and 1.5
           const seasonalFactor = 1 + (Math.sin(monthFactor / 12 * Math.PI * 2) * 0.2); // +/- 20% seasonal effect
           
           const monthlyReturn = baseMonthlyReturn * randomFactor * seasonalFactor;
@@ -325,7 +325,7 @@ export const SavingsPlanSimulator = ({
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-6 dark:border dark:border-slate-700">
-      <h2 className="text-xl font-semibold mb-4 dark:text-gray-200">Savings Plan Simulator</h2>
+      <h2 className="text-xl font-semibold mb-4 dark:text-gray-200">Simple Savings Plan Simulator</h2>
       
       <div className="flex flex-wrap gap-4">
         <div className="w-full">
