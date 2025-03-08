@@ -352,19 +352,22 @@ export const SavingsPlanSimulator = ({
             <div className="grid grid-cols-8 gap-4">  
               <div className="flex flex-wrap gap-2 overflow-y-auto pr-2 col-span-7">
                 {stocks.map(stock => (
-                  <div key={stock.id} className="flex items-center border border-gray-200 dark:border-slate-700 rounded-md p-2 bg-gray-100 dark:bg-slate-700/50">
-                    <div 
-                      className="w-3 h-3 rounded-full mr-2"
-                      style={{ backgroundColor: stockColors[stock.id] }}
-                    ></div>
-                    <span className="text-sm dark:text-gray-300 mr-2 truncate flex-1">{stock.name}</span>
-                    <input
-                      type="number"
-                      value={allocations[stock.id] || 0}
-                      onChange={(e) => handleAllocationChange(stock.id, Number(e.target.value))}
-                      className="border p-1 rounded dark:bg-slate-700 dark:text-white dark:border-slate-600 w-16 text-right"
-                    />
-                    <span className="ml-1 dark:text-gray-400">%</span>
+                  <div key={stock.id} className="flex flex-wrap items-center border border-gray-200 dark:border-slate-700 rounded-md p-2 bg-gray-100 dark:bg-slate-700/50">
+                    <div className='flex items-center justify-between w-full'>
+                      <div 
+                        className="w-3 h-3 rounded-full mr-2"
+                        style={{ backgroundColor: stockColors[stock.id] }}
+                      ></div>
+                      <span className="text-sm dark:text-gray-300 mr-2 truncate flex-1">{stock.name}</span>
+                      <input
+                        type="number"
+                        value={allocations[stock.id] || 0}
+                        onChange={(e) => handleAllocationChange(stock.id, Number(e.target.value))}
+                        className="border p-1 rounded dark:bg-slate-700 dark:text-white dark:border-slate-600 w-16 text-right"
+                      />
+                      <span className="ml-1 dark:text-gray-400">%</span>
+                    </div>
+                    <div className='flex items-end justify-end w-full text-xs dark:text-gray-400 italic'>Equals: {totalAmount * (allocations[stock.id] || 0) / 100}€</div>
                   </div>
                 ))}
               </div>
