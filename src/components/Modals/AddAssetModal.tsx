@@ -6,6 +6,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { usePortfolioSelector } from "../../hooks/usePortfolio";
 import { EQUITY_TYPES, getHistoricalData, searchAssets } from "../../services/yahooFinanceService";
 import { Asset } from "../../types";
+import { intervalBasedOnDateRange } from "../../utils/calculations/intervalBasedOnDateRange";
 
 export default function AddAssetModal({ onClose }: { onClose: () => void }) {
     const [ search, setSearch ] = useState('');
@@ -35,14 +36,15 @@ export default function AddAssetModal({ onClose }: { onClose: () => void }) {
 
     const debouncedSearch = useDebouncedCallback(handleSearch, 750);
 
-    const handleAssetSelect = (asset: Asset) => {
+    const handleAssetSelect = (asset: Asset, keepOpen: boolean = false) => {
         setLoading("adding");
         setTimeout(async () => {
             try {
                 const { historicalData, longName } = await getHistoricalData(
                     asset.symbol,
                     dateRange.startDate,
-                    dateRange.endDate
+                    dateRange.endDate,
+                    intervalBasedOnDateRange(dateRange),
                 );
 
                 if (historicalData.size === 0) {
@@ -58,7 +60,12 @@ export default function AddAssetModal({ onClose }: { onClose: () => void }) {
 
                 addAsset(assetWithHistory);
                 toast.success(`Successfully added ${assetWithHistory.name}`);
-                onClose();
+                if (!keepOpen) {
+                    onClose();
+                } else {
+                    setSearch("");
+                    setSearchResults([]);
+                }
             } catch (error) {
                 console.error('Error fetching historical data:', error);
                 toast.error(`Failed to add ${asset.name}. Please try again.`);
@@ -112,10 +119,9 @@ export default function AddAssetModal({ onClose }: { onClose: () => void }) {
                         </div>
                     ) : (
                         searchResults.map((result) => (
-                            <button
+                            <div
                                 key={result.symbol}
                                 className="w-full text-left p-3 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-900 rounded border-b dark:border-slate-700 border-gray-300"
-                                onClick={() => handleAssetSelect(result)}
                             >
                                 <div className="font-medium flex justify-between">
                                     <span>{result.name}</span>
@@ -129,7 +135,23 @@ export default function AddAssetModal({ onClose }: { onClose: () => void }) {
                                 <div className="text-sm text-gray-600">
                                     Ticker-Symbol: {result.symbol} | Type: {result.quoteType?.toUpperCase() || "Unknown"} | Rank: #{result.rank || "-"}
                                 </div>
-                            </button>
+                                <div className="mt-2 flex gap-2">
+                                    <button
+                                        onClick={() => handleAssetSelect(result, false)}
+                                        disabled={loading === "adding"}
+                                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                    >
+                                        Add
+                                    </button>
+                                    <button
+                                        onClick={() => handleAssetSelect(result, true)}
+                                        disabled={loading === "adding"}
+                                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                                    >
+                                        Add &amp; Add Another
+                                    </button>
+                                </div>
+                            </div>
                         ))
                     )}
                 </div>

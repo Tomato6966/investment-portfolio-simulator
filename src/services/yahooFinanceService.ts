@@ -88,7 +88,7 @@ export const searchAssets = async (query: string, equityType: string): Promise<A
     }
 };
 
-export const getHistoricalData = async (symbol: string, startDate: Date, endDate: Date) => {
+export const getHistoricalData = async (symbol: string, startDate: Date, endDate: Date, interval: string = "1d") => {
     try {
         const start = Math.floor(startDate.getTime() / 1000);
         const end = Math.floor(endDate.getTime() / 1000);
@@ -96,19 +96,21 @@ export const getHistoricalData = async (symbol: string, startDate: Date, endDate
         const params = new URLSearchParams({
             period1: start.toString(),
             period2: end.toString(),
-            interval: '1d',
+            interval: interval,
         });
 
         const url = `${API_BASE}/v8/finance/chart/${symbol}${!isDev ? encodeURIComponent(`?${params}`) : `?${params}`}`;
         const response = await fetch(url);
-        if (!response.ok) throw new Error('Network response was not ok');
+        if (!response.ok) throw new Error(`Network response was not ok (${response.status} - ${response.statusText} - ${await response.text().catch(() => 'No text')})`);
 
         const data = await response.json();
         const { timestamp, indicators, meta } = data.chart.result[0] as YahooChartResult;
         const quotes = indicators.quote[0];
 
+        const lessThenADay = ["60m", "1h", "90m", "45m", "30m", "15m", "5m", "2m", "1m"].includes(interval);
+
         return {
-            historicalData: new Map(timestamp.map((time: number, index: number) => [formatDateToISO(new Date(time * 1000)), quotes.close[index]])),
+            historicalData: new Map(timestamp.map((time: number, index: number) => [formatDateToISO(new Date(time * 1000), lessThenADay), quotes.close[index]])),
             longName: meta.longName
         }
     } catch (error) {

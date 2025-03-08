@@ -90,7 +90,7 @@ export const calculatePortfolioValue = (assets: Asset[], dateRange: DateRange) =
         (dayData) => {
             const vals = Object.values(dayData.assets);
             // Keep days where at least one asset has data
-            return vals.length > 0 && vals.some(value => value > 0);
+            return vals.some(value => value > 0);
         }
     );
 };

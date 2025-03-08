@@ -37,5 +37,5 @@ export const getHexColor = (usedColors: Set<string>, isDarkMode: boolean): strin
     return `#${Math.floor(Math.random() * 16777215).toString(16)}`;
 };
 
-export const formatDateToISO = (date: Date) => formatDate(date, 'yyyy-MM-dd');
+export const formatDateToISO = (date: Date, lessThenADay: boolean = false) => lessThenADay ? formatDate(date, 'yyyy-MM-dd_HH:mm') : formatDate(date, 'yyyy-MM-dd');
 export const isValidDate = (dateString: string) => isValid(parseISO(dateString));

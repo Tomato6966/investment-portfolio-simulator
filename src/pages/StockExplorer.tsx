@@ -11,7 +11,7 @@ import { useDarkMode } from "../hooks/useDarkMode";
 import { EQUITY_TYPES, getHistoricalData, searchAssets } from "../services/yahooFinanceService";
 import { Asset } from "../types";
 import { getHexColor } from "../utils/formatters";
-
+import { intervalBasedOnDateRange } from "../utils/calculations/intervalBasedOnDateRange";
 // Time period options
 const TIME_PERIODS = {
     YTD: "Year to Date",
@@ -119,10 +119,16 @@ const StockExplorer = () => {
 
         setLoading(true);
         try {
+            // Use a more efficient date range for initial load
+            const optimizedStartDate = timePeriod === "MAX" || timePeriod === "20Y" || timePeriod === "15Y" || timePeriod === "10Y" 
+                ? new Date(dateRange.startDate.getTime() + (365 * 24 * 60 * 60 * 1000)) // Skip first year for very long ranges
+                : dateRange.startDate;
+            
             const { historicalData, longName } = await getHistoricalData(
                 stock.symbol,
-                dateRange.startDate,
-                dateRange.endDate
+                optimizedStartDate,
+                dateRange.endDate,
+                intervalBasedOnDateRange({ startDate: optimizedStartDate, endDate: dateRange.endDate })
             );
 
             if (historicalData.size === 0) {
@@ -148,7 +154,6 @@ const StockExplorer = () => {
             });
 
             // Don't clear results, so users can add multiple stocks
-            // Just clear the specific stock that was added
             setSearchResults(prev => prev.filter(result => result.symbol !== stock.symbol));
 
             toast.success(`Added ${stockWithHistory.name} to comparison`);
@@ -158,7 +163,7 @@ const StockExplorer = () => {
         } finally {
             setLoading(false);
         }
-    }, [dateRange, isDarkMode, selectedStocks]);
+    }, [dateRange, isDarkMode, selectedStocks, timePeriod]);
 
     // Remove stock from comparison
     const removeStock = useCallback((stockId: string) => {
@@ -259,40 +264,52 @@ const StockExplorer = () => {
     // Refresh stock data when stocks or date range changes
     const refreshStockData = useCallback(async () => {
         if (selectedStocks.length === 0) return;
-
+        
         setLoading(true);
         try {
-            // Fetch updated data for each stock
-            const updatedStocks = await Promise.all(
-                selectedStocks.map(async stock => {
-                    const { historicalData, longName } = await getHistoricalData(
-                        stock.symbol,
-                        dateRange.startDate,
-                        dateRange.endDate
-                    );
-
-                    return {
-                        ...stock,
-                        name: longName || stock.name,
-                        historicalData
-                    };
-                })
-            );
-
-            // Update chart data
-            setStockData(processStockData(updatedStocks));
-
-            // Unconditionally update selectedStocks so the table refreshes
+            // Process in batches for better performance
+            const batchSize = 3;
+            const batches = [];
+            
+            for (let i = 0; i < selectedStocks.length; i += batchSize) {
+                batches.push(selectedStocks.slice(i, i + batchSize));
+            }
+            
+            const updatedStocks = [...selectedStocks];
+            
+            for (const batch of batches) {
+                await Promise.all(batch.map(async (stock, index) => {
+                    try {
+                        const { historicalData, longName } = await getHistoricalData(
+                            stock.symbol,
+                            dateRange.startDate,
+                            dateRange.endDate,
+                            intervalBasedOnDateRange({ startDate: dateRange.startDate, endDate: dateRange.endDate })
+                        );
+                        
+                        if (historicalData.size > 0) {
+                            updatedStocks[selectedStocks.indexOf(stock)] = {
+                                ...stock,
+                                name: longName || stock.name,
+                                historicalData
+                            };
+                        }
+                    } catch (error) {
+                        console.error(`Error refreshing ${stock.name}:`, error);
+                    }
+                }));
+            }
+            
             setSelectedStocks(updatedStocks);
-
-            toast.success("Stock data refreshed");
+            processStockData(updatedStocks);
+            
         } catch (error) {
             console.error("Error refreshing data:", error);
             toast.error("Failed to refresh stock data");
         } finally {
             setLoading(false);
         }
-    }, [dateRange, processStockData]);
+    }, [dateRange, selectedStocks, timePeriod, processStockData]);
 
     // Calculate performance metrics for each stock with best/worst year
     const calculatePerformanceMetrics = useCallback((stock: Asset) => {
@@ -672,6 +689,11 @@ const StockExplorer = () => {
                         </div>
                     </div>
                 )}
+            </div>
+            
+            {/* Made with Love Badge */}
+            <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                Made with ❤️ by <a href="https://github.com/0xroko" className="text-blue-500 hover:underline">0xroko</a>
             </div>
         </div>
     );

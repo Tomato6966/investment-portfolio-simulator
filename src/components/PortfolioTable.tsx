@@ -28,10 +28,11 @@ interface SavingsPlanPerformance {
 }
 
 export default memo(function PortfolioTable() {
-    const { assets, removeInvestment, clearInvestments } = usePortfolioSelector((state) => ({
+    const { assets, removeInvestment, clearInvestments, removeAsset } = usePortfolioSelector((state) => ({
         assets: state.assets,
         removeInvestment: state.removeInvestment,
         clearInvestments: state.clearInvestments,
+        removeAsset: state.removeAsset,
     }));
 
     const [editingInvestment, setEditingInvestment] = useState<{
@@ -240,7 +241,14 @@ export default memo(function PortfolioTable() {
                                 key={asset.id}
                                 className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
                             >
-                                <h3 className="text-lg font-bold mb-2 text-nowrap">{asset.name}</h3>
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-bold mb-2 text-nowrap">{asset.name}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <button className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors" onClick={() => removeAsset(asset.id)}>
+                                            <Trash2 className="w-4 h-4 text-red-500" />
+                                        </button>
+                                    </div>
+                                </div>
                                 <div className="space-y-2">
                                     <table className="w-full">
                                         <thead>
@@ -598,6 +606,76 @@ export default memo(function PortfolioTable() {
                     onClose={() => setShowPortfolioPerformance(false)}
                 />
             )}
+
+            <div className="overflow-x-auto dark:text-gray-300 p-4 border-gray-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-800 shadow-lg dark:shadow-black/60 mt-6">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold">Assets Performance Overview</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {assets.map(asset => {
+                        const assetPerformance = calculateInvestmentPerformance([asset]);
+                        const totalInvested = assetPerformance.summary.totalInvested;
+                        const currentValue = assetPerformance.summary.currentValue;
+                        const performancePercent = assetPerformance.summary.performancePercentage;
+                        
+                        return (
+                            <div 
+                                key={asset.id} 
+                                className="border dark:border-slate-700 rounded-lg p-4 flex flex-col h-full"
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <h4 className="font-bold text-md truncate max-w-[80%]" title={asset.name}>
+                                        {asset.name}
+                                    </h4>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm(`Are you sure you want to remove ${asset.name} including all its investments?`)) {
+                                                removeInvestment(asset.id, asset.investments[0].id);
+                                            }
+                                        }}
+                                        className="p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
+                                        title="Remove asset including all its investments"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-2 mb-2 flex-grow">
+                                    <div className="text-sm">
+                                        <div className="text-gray-500 dark:text-gray-400">Invested</div>
+                                        <div>€{totalInvested.toFixed(2)}</div>
+                                    </div>
+                                    <div className="text-sm">
+                                        <div className="text-gray-500 dark:text-gray-400">Current</div>
+                                        <div>€{currentValue.toFixed(2)}</div>
+                                    </div>
+                                    <div className="text-sm">
+                                        <div className="text-gray-500 dark:text-gray-400">Performance</div>
+                                        <div className={performancePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
+                                            {performancePercent.toFixed(2)}%
+                                        </div>
+                                    </div>
+                                    <div className="text-sm">
+                                        <div className="text-gray-500 dark:text-gray-400">Positions</div>
+                                        <div>{asset.investments.length}</div>
+                                    </div>
+                                </div>
+                                
+                                <button
+                                    onClick={() => setSelectedAsset({
+                                        name: asset.name,
+                                        performances: assetPerformance.summary.annualPerformancesPerAsset.get(asset.id) || []
+                                    })}
+                                    className="w-full mt-2 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
+                                >
+                                    View Performance
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
         </div>
     );
 });
