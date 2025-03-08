@@ -1,10 +1,17 @@
 import { formatDate, isValid, parseISO } from "date-fns";
 
-export const formatCurrency = (value: number): string => {
-  return `€${value.toLocaleString('de-DE', {
+const currencyFormatter = (currency: string|null) => {
+    if(currency?.toUpperCase() === "USD") return "$";
+    if(currency?.toUpperCase() === "GBP") return "£";
+    if(currency?.toUpperCase() === "EUR") return "€";
+    return currency ?? "🪙";
+}
+
+export const formatCurrency = (value: number|undefined|null, currencyString:string|null = "€"): string => {
+  return `${currencyFormatter(currencyString)} ${value?.toLocaleString('de-DE', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  })}`;
+  }) ?? "N/A"}`;
 };
 
 const LIGHT_MODE_COLORS = [

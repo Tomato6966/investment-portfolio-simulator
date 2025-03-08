@@ -12,8 +12,7 @@ export const intervalBasedOnDateRange = (dateRange: DateRange, withSubDays: bool
     if(withSubDays && diffDays > 60 && diffDays < 100) return "1h";
     if(diffDays < oneYear * 2.5) return "1d";
     if(diffDays < oneYear * 6 && diffDays >= oneYear * 2.5) return "5d";
-    if(diffDays < oneYear * 15 && diffDays >= oneYear * 6) return "1wk";
-    if(diffDays >= oneYear * 30) return "1mo";
-    return "1d";
+    if(diffDays <= oneYear * 15 && diffDays >= oneYear * 6) return "1wk";
+    if(diffDays >= 20) return "1mo";
 }
 

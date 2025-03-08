@@ -25,8 +25,6 @@ export const EQUITY_TYPES = {
 export const searchAssets = async (query: string, equityType: string): Promise<Asset[]> => {
     try {
         // Log input parameters for debugging
-        console.log(`Searching for "${query}" with type "${equityType}"`);
-
         const params = new URLSearchParams({
             query,
             lang: 'en-US',
@@ -35,7 +33,6 @@ export const searchAssets = async (query: string, equityType: string): Promise<A
         });
 
         const url = `${API_BASE}/v1/finance/lookup${!isDev ? encodeURIComponent(`?${params}`) : `?${params}`}`;
-        console.log(`Request URL: ${url}`);
 
         const response = await fetch(url);
         if (!response.ok) {
@@ -44,7 +41,6 @@ export const searchAssets = async (query: string, equityType: string): Promise<A
         }
 
         const data = await response.json() as YahooSearchResponse;
-        console.log("API response:", data);
 
         if (data.finance.error) {
             console.error(`API error: ${data.finance.error}`);
@@ -52,7 +48,6 @@ export const searchAssets = async (query: string, equityType: string): Promise<A
         }
 
         if (!data.finance.result?.[0]?.documents) {
-            console.log("No results found");
             return [];
         }
 
@@ -61,9 +56,6 @@ export const searchAssets = async (query: string, equityType: string): Promise<A
         return data.finance.result[0].documents
             .filter(quote => {
                 const matches = equityTypes.includes(quote.quoteType.toLowerCase());
-                if (!matches) {
-                    console.log(`Filtering out ${quote.symbol} (${quote.quoteType}) as it doesn't match ${equityTypes.join(', ')}`);
-                }
                 return matches;
             })
             .map((quote) => ({
@@ -104,14 +96,16 @@ export const getHistoricalData = async (symbol: string, startDate: Date, endDate
         if (!response.ok) throw new Error(`Network response was not ok (${response.status} - ${response.statusText} - ${await response.text().catch(() => 'No text')})`);
 
         const data = await response.json();
-        const { timestamp, indicators, meta } = data.chart.result[0] as YahooChartResult;
+        const { timestamp = [], indicators, meta } = data.chart.result[0] as YahooChartResult;
         const quotes = indicators.quote[0];
 
         const lessThenADay = ["60m", "1h", "90m", "45m", "30m", "15m", "5m", "2m", "1m"].includes(interval);
 
         return {
             historicalData: new Map(timestamp.map((time: number, index: number) => [formatDateToISO(new Date(time * 1000), lessThenADay), quotes.close[index]])),
-            longName: meta.longName
+            longName: meta.longName,
+            currency: meta.currency,
+            lastPrice: meta.chartPreviousClose
         }
     } catch (error) {
         console.error('Error fetching historical data:', error);
