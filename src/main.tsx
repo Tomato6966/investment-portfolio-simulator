@@ -10,7 +10,7 @@ import { DarkModeProvider } from "./providers/DarkModeProvider.tsx";
 // Let App handle the route definitions
 const router = createBrowserRouter(App, {
     // for github pages...
-    basename: process.env.CUSTOM_BASE_NAME || "investment-portfolio-simulator"
+    basename: import.meta.env.VITE_CUSTOM_BASE_NAME || "/investment-portfolio-simulator"
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
