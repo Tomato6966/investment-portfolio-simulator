@@ -255,7 +255,7 @@ const StockExplorer = () => {
                                     newSavingsPlanParams.allocations[stock.id] = 100 / loadedStocks.length;
                                 });
                             }
-                            
+                            console.log("apply newsavingsplan 1 ", newSavingsPlanParams)
                             // Apply the final savings plan params
                             setSavingsPlanParams(newSavingsPlanParams);
                         }
@@ -268,10 +268,12 @@ const StockExplorer = () => {
                 })();
             } else {
                 // No stocks to load, just set the savings plan params
+                console.log("apply newsavingsplan 2 ", newSavingsPlanParams)
                 setSavingsPlanParams(newSavingsPlanParams);
             }
         } else {
             // No stocks to load, just set the savings plan params
+            console.log("apply newsavingsplan 3 ", newSavingsPlanParams)
             setSavingsPlanParams(newSavingsPlanParams);
         }
     }, []);  // Empty dependency array for mount only
@@ -357,6 +359,7 @@ const StockExplorer = () => {
         }
     }, [selectedStocks, timePeriod, customDateRange, savingsPlanParams, setSearchParams, setDebouncedSearchParams]);
 
+    console.log()
     // Handle search
     const handleSearch = useCallback(async () => {
         if (!searchQuery || searchQuery.length < 2) {
@@ -1155,7 +1158,12 @@ const StockExplorer = () => {
 
                 {/* Savings Plan Simulator */}
                 {selectedStocks.length > 0 && (
-                    <SavingsPlanSimulator stocks={selectedStocks} stockColors={stockColors} onParamsChange={setSavingsPlanParams} />
+                    <SavingsPlanSimulator 
+                        stocks={selectedStocks} 
+                        stockColors={stockColors} 
+                        initialParams={savingsPlanParams} 
+                        onParamsChange={setSavingsPlanParams} 
+                    />
                 )}
             </div>
 

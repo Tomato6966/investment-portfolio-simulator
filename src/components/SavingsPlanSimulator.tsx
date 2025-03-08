@@ -49,6 +49,34 @@ export const SavingsPlanSimulator = ({
     }, {} as Record<string, number>)
   );
 
+  // THIS IS THE KEY ADDITION - Update state when initialParams changes
+  useEffect(() => {
+    if (initialParams) {
+      if (initialParams.monthlyAmount > 0) {
+        setTotalAmount(initialParams.monthlyAmount);
+      }
+      
+      if (initialParams.years > 0) {
+        setYears(initialParams.years);
+      }
+      
+      if (Object.keys(initialParams.allocations).length > 0) {
+        // Only update allocations if we have some valid allocations
+        // and we have stocks to allocate to
+        if (stocks.length > 0) {
+          // Check if we have allocations that match our current stocks
+          const hasMatchingAllocations = stocks.some(stock => 
+            initialParams.allocations[stock.id] !== undefined
+          );
+          
+          if (hasMatchingAllocations) {
+            setAllocations(initialParams.allocations);
+          }
+        }
+      }
+    }
+  }, [initialParams, stocks]);
+  
   // Call the onParamsChange callback when parameters change
   useEffect(() => {
     if (onParamsChange) {
@@ -283,45 +311,6 @@ export const SavingsPlanSimulator = ({
       projectionData
     };
   };
-  
-  // Helper function: map a return to a color.
-  // Negative returns will be red, positive green, with yellows in between.
-  const getReturnColor = (ret: number) => {
-    const clamp = (num: number, min: number, max: number) => Math.max(min, Math.min(num, max));
-    // Normalize so that -10% maps to 0, 0% to 0.5, and +10% to 1. (Adjust these as needed)
-    const normalized = clamp((ret + 0.1) / 0.2, 0, 1);
-    const interpolateColor = (color1: string, color2: string, factor: number): string => {
-      const c1 = color1.slice(1).match(/.{2}/g)!.map(hex => parseInt(hex, 16));
-      const c2 = color2.slice(1).match(/.{2}/g)!.map(hex => parseInt(hex, 16));
-      const r = Math.round(c1[0] + factor * (c2[0] - c1[0]));
-      const g = Math.round(c1[1] + factor * (c2[1] - c1[1]));
-      const b = Math.round(c1[2] + factor * (c2[2] - c1[2]));
-      return `rgb(${r}, ${g}, ${b})`;
-    };
-
-    // Interpolate from red (#ff0000) to yellow (#ffff00) then yellow to green (#00ff00)
-    if (normalized <= 0.5) {
-      const factor = normalized / 0.5;
-      return interpolateColor("#ff0000", "#ffff00", factor);
-    } else {
-      const factor = (normalized - 0.5) / 0.5;
-      return interpolateColor("#ffff00", "#00ff00", factor);
-    }
-  };
-
-  // Add a TIME_PERIODS constant based on StockExplorer's implementation
-  const TIME_PERIODS = {
-    "MTD": "Month to Date",
-    "1M": "1 Month",
-    "3M": "3 Months",
-    "6M": "6 Months",
-    "YTD": "Year to Date",
-    "1Y": "1 Year",
-    "3Y": "3 Years",
-    "5Y": "5 Years",
-    "10Y": "10 Years",
-    "MAX": "Max"
-  };
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-6 dark:border dark:border-slate-700">
@@ -470,7 +459,7 @@ export const SavingsPlanSimulator = ({
                   />
                   <YAxis tick={{ fill: '#4E4E4E' }} />
                   <Tooltip
-                    formatter={(value: number) => [`€${Math.round(value).toLocaleString()}`, 'Value']}
+                    formatter={(value: number, name: string) => [`€${Math.round(value).toLocaleString()}`, name]}
                     labelFormatter={(label) => label}
                   />
                   <Legend />
