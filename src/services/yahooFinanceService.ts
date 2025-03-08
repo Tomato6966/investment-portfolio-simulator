@@ -100,11 +100,10 @@ export const getHistoricalData = async (symbol: string, startDate: Date, endDate
         const quotes = indicators.quote[0];
 
         const lessThenADay = ["60m", "1h", "90m", "45m", "30m", "15m", "5m", "2m", "1m"].includes(interval);
-
         return {
             historicalData: new Map(timestamp.map((time: number, index: number) => [formatDateToISO(new Date(time * 1000), lessThenADay), quotes.close[index]])),
             longName: meta.longName,
-            currency: meta.currency,
+            currency: meta.currency || symbol.toUpperCase().includes("USD") ? "USD" : symbol.toUpperCase().includes("GBP") ? "GBP" : symbol.toUpperCase().includes("EUR") ? "EUR" : null,
             lastPrice: meta.chartPreviousClose
         }
     } catch (error) {
