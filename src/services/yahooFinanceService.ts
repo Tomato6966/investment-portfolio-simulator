@@ -6,7 +6,9 @@ import { formatDateToISO } from "../utils/formatters";
 // this is only needed when hosted staticly without a proxy server or smt
 // TODO change it to use the proxy server
 const isDev = import.meta.env.DEV;
-const CORS_PROXY = 'https://corsproxy.io/?url=';
+//https://thingproxy.freeboard.io/fetch/{url}
+//https://corsproxy.io/?url={url}
+const CORS_PROXY = 'https://thingproxy.freeboard.io/fetch/';
 const YAHOO_API = 'https://query1.finance.yahoo.com';
 const API_BASE = isDev ? '/yahoo' : `${CORS_PROXY}${encodeURIComponent(YAHOO_API)}`;
 
