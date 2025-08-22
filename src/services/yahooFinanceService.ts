@@ -7,8 +7,9 @@ import { formatDateToISO } from "../utils/formatters";
 // TODO change it to use the proxy server
 const isDev = import.meta.env.DEV;
 //https://thingproxy.freeboard.io/fetch/{url}
+//https://api.allorigins.win/raw?url={url}
 //https://corsproxy.io/?url={url}
-const CORS_PROXY = 'https://thingproxy.freeboard.io/fetch/';
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 const YAHOO_API = 'https://query1.finance.yahoo.com';
 const API_BASE = isDev ? '/yahoo' : `${CORS_PROXY}${encodeURIComponent(YAHOO_API)}`;
 
